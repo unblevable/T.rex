@@ -9,17 +9,18 @@ defmodule Trex.Bencode do
   the file's metadata
   """
   def decode(bin) do
-    { _, dict } = parse_bin(bin)
+    { _, dict } =  String.rstrip(bin) |> parse_bin
     dict
   end
 
   @doc"""
   Parse a .torrent binary by data type, i.e. integer, string, list, dictionary
   """
-  def parse_bin(<<?i::utf8, tail::binary>>), do: parse_int(tail, [])
-  def parse_bin(<<?l::utf8, tail::binary>>), do: parse_list(tail, [])
-  def parse_bin(<<?d::utf8, tail::binary>>), do: parse_dict(tail, HashDict.new)
-  def parse_bin(str), do: parse_str(str, [])
+  def parse_bin(<<?i::utf8, tail::binary>>),  do: parse_int(tail, [])
+  def parse_bin(<<?l::utf8, tail::binary>>),  do: parse_list(tail, [])
+  def parse_bin(<<?d::utf8, tail::binary>>),  do: parse_dict(tail, HashDict.new)
+  def parse_bin(<<?e::utf8, tail::binary>>),  do: parse_bin(tail)
+  def parse_bin(bin),                         do: parse_str(bin, [])
 
   @doc"""
   Parse a BEncoded integer, which is encoded as i<integer>e
@@ -30,44 +31,55 @@ defmodule Trex.Bencode do
   @doc"""
   Parse a BEncoded list, which is encoded as l<list>e
   """
-  def parse_list(<<?e::utf8, tail::binary>>, acc),    do: { tail, acc }
-  def parse_list(<<head::utf8, tail::binary>>, acc),  do: parse_list(tail, acc ++ List.wrap(head))
+  def parse_list(<<?e::utf8, tail::binary>>, acc) do
+    :io.format("found EEEEE")
+    { tail, acc }
+  end
+  def parse_list(bin = <<head::utf8, tail::binary>>, acc) do
+    :io.format("list~n")
+    case parse_bin(bin) do
+      { val_tail, val } -> parse_list(val_tail, acc ++ List.wrap(val))
+      end_tail -> { end_tail, List.flatten acc }
+    end
+  end
+  def parse_list(_, acc), do: { nil, acc }
 
   @doc"""
   Parse a BEncoded string, which is encoded as <length>:<string>
-
-  [fix] Use size and read length of binary manually.
   """
-  def parse_str(<<?:::utf8, tail::binary>>, acc) do
+  def parse_str(<<?:, tail::binary>>, acc) do
     # extract the integer that denotes the string's length
     str_len = list_to_integer acc
-    tail_len = byte_size(tail)
+
+    tail_len = byte_size(tail) - str_len
+    if tail_len < 0, do: tail_len = 0
 
     # return the accumalator without the <string> and the <string>
-    { String.slice(tail, str_len, tail_len - str_len - 1), String.slice(tail, 0, str_len) }
+    { String.slice(tail, str_len, tail_len), String.slice(tail, 0, str_len) }
   end
-  def parse_str(<<head::utf8, tail::binary>>, acc), do: parse_str(tail, acc ++ List.wrap(head))
+  def parse_str(<<head::utf8, tail::binary>>, acc) do
+    parse_str(tail, acc ++ List.wrap(head))
+  end
+  def parse_str(_, acc), do: nil
 
   @doc"""
   Parse a BEncoded dictionary, which is encoded as d<key><value>e. Multiple
   key-value pairs can be specified
   """
-  def parse_dict(<<?e>>, acc) do
-    IO.puts "found e"
-    acc
-  end
-  def parse_dict(nil, acc), do: { nil, acc }
   def parse_dict(bin, acc) do
     # parse the key first and the value second
-    { key_tail, key } = parse_bin(bin)
-
-    case parse_bin(key_tail) do
-      { val_tail, val } ->
-        # :io.format("~p", [val])
-        # :io.format("~p", [val_tail])
-        parse_dict(val_tail, HashDict.put(acc, key, val))
-      _acc -> :ok
+    case parse_bin(bin) do
+      { key_tail, key } ->
+        :io.format("key: ~p~n", [key])
+        case parse_bin(key_tail) do
+          { val_tail, val } ->
+            # :io.format("val: ~p~n", [val])
+            parse_dict(val_tail, HashDict.put(acc, key, val))
+            end_tail -> { end_tail, acc }
+        end
+        end_tail -> { end_tail, acc }
     end
+
   end
 
   @doc"""

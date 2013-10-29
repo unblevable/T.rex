@@ -1,7 +1,7 @@
 defmodule Trex.IO do
 
   def read() do
-    File.read("resrc/sample.torrent")
+    File.read("resrc/flagfromserver.torrent")
     |>  parse
   end
 
