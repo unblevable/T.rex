@@ -1,3 +1,4 @@
-# Trex
+T.rex
+=====
 
-** TODO: Add description **
+yet another bittorrent client
