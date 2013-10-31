@@ -9,49 +9,49 @@ defmodule BencodeTest do
   @eof ""
 
   test "decodes integer" do
-    assert parse_bin("i12345e") == { @eof, 12345 }
+    assert decode("i12345e") == 12345
   end
 
   test "decodes string" do
-    assert parse_bin("14:maps & atlases") == { @eof, "maps & atlases" }
-  end
-
-  test "decodes string and returns rest of file" do
-    assert parse_bin("14:maps & atlases11:arcade fire") == { "11:arcade fire", "maps & atlases" }
+    assert decode("6:winter") == "winter"
   end
 
   test "decodes list" do
-    assert parse_bin("l14:maps & atlases11:arcade firee") == { @eof, [ "maps & atlases", "arcade fire" ] }
+    assert decode("l5:fever6:wintere") == ["fever", "winter"]
   end
 
   test "decodes nested list" do
-    assert parse_bin("l14:maps & atlasesl10:artichokes10:ted zanchaee") == { @eof, ["maps & atlases", ["artichokes", "ted zancha"]] }
+    assert decode("l5:feverl2:is3:wasee") == ["fever", ["is", "was"]]
   end
 
   test "decodes dictionary" do
     hash_dict = HashDict.new
-    |>  HashDict.put("maps & atlases", "perch patchwork")
-    |>  HashDict.put("arcade fire", "reflektor")
+    |>  HashDict.put("maps", "atlases")
+    |>  HashDict.put("arcade", "fire")
 
-    assert parse_bin("d14:maps & atlases15:perch patchwork11:arcade fire9:reflektore") == { @eof, hash_dict }
+    assert decode("d4:maps7:atlases6:arcade4:firee")
   end
 
   test "decodes nested dictionary" do
     hash_dict = HashDict.new
-    |>  HashDict.put("maps & atlases", HashDict.new
-      |>  HashDict.put("perch patchwork", "artichokes")
-      |>  HashDict.put("beware and be grateful", "winter"))
+    |>  HashDict.put("maps", HashDict.new
+      |>  HashDict.put("perch", "is")
+      |>  HashDict.put("beware", "fever"))
 
-    assert parse_bin("d14:maps & atlasesd15:perch patchwork10:artichokes22:beware and be grateful6:winteree") == { @eof, hash_dict }
+    assert decode("d4:mapsd5:perch2:is6:beware5:feveree") == hash_dict
   end
 
   test "decoder closes dictionary" do
     hash_dict = HashDict.new
-    |>  HashDict.put("arcade fire", HashDict.new
-      |>  HashDict.put("reflektor", "reflektor"))
-    |>  HashDict.put("fleet foxes", "helplessness blues")
+    |>  HashDict.put("maps", HashDict.new
+      |>  HashDict.put("perch", "is"))
+    |>  HashDict.put("fleet", "helplessness")
 
-    assert parse_bin("d11:arcade fired9:reflektor9:reflektore11:fleet foxes18:helplessness bluese") == { @eof, hash_dict }
+    assert decode("d4:mapsd5:perch2:ise5:fleet12:helplessnesse") == hash_dict
+  end
+
+  test "encodes integer" do
+    assert encode(12345, @eof) == "i12345e"
   end
 
 end
