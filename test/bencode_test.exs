@@ -60,6 +60,10 @@ defmodule BencodeTest do
     assert encode("maps") == "4:maps"
   end
 
+  test "encodes list" do
+    assert encode({ :list, ["fever", "winter"] }) == "l5:fever6:wintere"
+  end
+
   test "encodes dictionary" do
     hash_dict = HashDict.new
     |>  HashDict.put("maps", "atlases")
@@ -76,6 +80,13 @@ defmodule BencodeTest do
     |>  HashDict.put("maps", { :dict, inner_hash_dict })
 
     assert encode({ :dict, outer_hash_dict }) == "d4:mapsd6:beware5:fever5:perch2:isee"
+  end
+
+  test "encoded dictionary matches original binary" do
+    { :ok, orig_bin } = File.read("resrc/big.torrent")
+    enc_bin = decode orig_bin
+    |>  encode
+    assert orig_bin == enc_bin
   end
 
 end

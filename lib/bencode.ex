@@ -11,7 +11,6 @@ defmodule Trex.Bencode do
   def decode(bin, dict_impl = module // ListDict ) do
     # exclude the trailing character
     { _, dict } = parse_bin(bin, dict_impl)
-    # encode(dict)
     dict
   end
 
@@ -36,7 +35,7 @@ defmodule Trex.Bencode do
     # extract what remains of the file to parse
     <<str::[binary, size(str_len)], rem::binary>> = tail
 
-     { rem, str }
+    { rem, str }
   end
   defp parse_str(<<head::utf8, tail::binary>>, acc) do
     parse_str(tail, acc ++ List.wrap(head))
@@ -57,7 +56,7 @@ defmodule Trex.Bencode do
     { tail, { :dict, acc } }
   end
   defp parse_dict(bin, acc, dict_impl) do
-    # recurse to grab the key and recurse again to grab the value
+    # recurse to grab each key and recurse again to grab each value
     { key_tail, key } = parse_bin(bin, dict_impl)
     { val_tail, val } = parse_bin(key_tail, dict_impl)
 
@@ -67,17 +66,20 @@ defmodule Trex.Bencode do
   defp unparse(int) when is_integer(int), do: "i" <> to_string(int) <> "e"
   defp unparse(str) when is_binary(str),  do: (size(str) |> to_string) <> ":" <> str
   defp unparse({ :list, list }) when is_list(list) do
+    # recurse on each item of a list
     comprehension = lc x inlist list, do: unparse(x)
     "l" <> to_string(comprehension) <> "e"
   end
   defp unparse({ :dict, dict }) do
-    kvpair = Enum.sort(dict, fn({ k0, v0 }, { k1, v1 }) -> k0 < k1 end)
+    # sort the dictionary and encode each key and then each value; wrap the
+    # resulting key-value pair into a list (for ease) and reduce the list into
+    # a concatenated string
+    dict_as_string = Enum.sort(dict, fn({ k0, v0 }, { k1, v1 }) -> k0 < k1 end)
     |> Enum.map(fn({ k, v }) when is_integer(k) or is_binary(k) -> List.wrap(unparse k) ++ List.wrap(unparse v) end)
-
-    dict_to_string = List.flatten(kvpair)
+    |>  List.flatten
     |>  List.foldr "", fn(x, acc) -> to_string(x) <> to_string(acc) end
 
-    "d" <> dict_to_string <> "e"
+    "d" <> dict_as_string <> "e"
   end
 
 end
