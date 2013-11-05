@@ -7,14 +7,19 @@ defmodule Trex.Bencode do
   @doc"""
   Take a binary (from a .torrent file) and a Dict implementation and output a
   dictionary of that type (in no particular order) and contains the file's metadata.
-
-  @default ListDict
   """
   def decode(bin, dict_impl = module // ListDict ) do
-    # exclude the trailing newline character
+    # exclude the trailing character
     { _, dict } = parse_bin(bin, dict_impl)
+    # encode(dict)
     dict
   end
+
+  @doc"""
+  Take a dictionary containing torrent metadata and encode it into a .torrent
+  file.
+  """
+  def encode(dict), do: unparse(dict)
 
   defp parse_bin(<<?i::utf8, tail::binary>>, _dict_impl), do: parse_int(tail, [])
   defp parse_bin(<<?l::utf8, tail::binary>>, dict_impl),  do: parse_list(tail, [], dict_impl)
@@ -56,22 +61,23 @@ defmodule Trex.Bencode do
     { key_tail, key } = parse_bin(bin, dict_impl)
     { val_tail, val } = parse_bin(key_tail, dict_impl)
 
-    parse_dict(val_tail, dict_impl.put(acc, key, val), dict_impl)
+    parse_dict(val_tail, Dict.put(acc, key, val), dict_impl)
   end
 
-  @doc"""
-  Take a dictionary containing torrent metadata and encode it into a .torrent
-  file.
-  """
+  defp unparse(int) when is_integer(int), do: "i" <> to_string(int) <> "e"
+  defp unparse(str) when is_binary(str),  do: (size(str) |> to_string) <> ":" <> str
+  defp unparse({ :list, list }) when is_list(list) do
+    comprehension = lc x inlist list, do: unparse(x)
+    "l" <> to_string(comprehension) <> "e"
+  end
+  defp unparse({ :dict, dict }) do
+    kvpair = Enum.sort(dict, fn({ k0, v0 }, { k1, v1 }) -> k0 < k1 end)
+    |> Enum.map(fn({ k, v }) when is_integer(k) or is_binary(k) -> List.wrap(unparse k) ++ List.wrap(unparse v) end)
 
-  defp encode(int, acc) when is_integer(int), do: ?i <> to_string(int) <> ?e
-  defp encode(str, acc) when is_binary(str), do: (String.length(str) |> to_string) <> ?: <> str
+    dict_to_string = List.flatten(kvpair)
+    |>  List.foldr "", fn(x, acc) -> to_string(x) <> to_string(acc) end
 
-  # defp encode(Dict.empty(dict)) do when is_tuple or is_list
-  #   Dict.to_list(dict)
-  #   |>  List.map( jjj
-  # end
-
-  # defp encode(enum) when is_integer
+    "d" <> dict_to_string <> "e"
+  end
 
 end
