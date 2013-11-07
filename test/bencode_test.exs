@@ -9,19 +9,21 @@ defmodule BencodeTest do
   @eof ""
 
   test "decodes integer" do
-    assert decode("i12345e") == 12345
+    assert decode("i12345e") == { :ok, 12345 }
   end
 
   test "decodes string" do
-    assert decode("6:winter") == "winter"
+    assert decode("6:winter") == { :ok, "winter" }
   end
 
   test "decodes list" do
-    assert decode("l5:fever6:wintere") == { :list, ["fever", "winter"] }
+    assert decode("l5:fever6:wintere") ==
+    { :ok, { :list, ["fever", "winter"] } }
   end
 
   test "decodes nested list" do
-    assert decode("l5:feverl2:is3:wasee") == { :list, ["fever", { :list, ["is", "was"] }] }
+    assert decode("l5:feverl2:is3:wasee") ==
+    { :ok, { :list, ["fever", { :list, ["is", "was"] }] } }
   end
 
   test "decodes dictionary" do
@@ -29,7 +31,8 @@ defmodule BencodeTest do
     |>  HashDict.put("maps", "atlases")
     |>  HashDict.put("arcade", "fire")
 
-    assert decode("d4:maps7:atlases6:arcade4:firee", HashDict) == { :dict, hash_dict }
+    assert decode("d4:maps7:atlases6:arcade4:firee", HashDict) ==
+    { :ok, { :dict, hash_dict } }
   end
 
   test "decodes nested dictionary" do
@@ -39,7 +42,8 @@ defmodule BencodeTest do
     outer_hash_dict = HashDict.new
     |>  HashDict.put("maps", { :dict, inner_hash_dict })
 
-    assert decode("d4:mapsd5:perch2:is6:beware5:feveree", HashDict) == { :dict, outer_hash_dict }
+    assert decode("d4:mapsd5:perch2:is6:beware5:feveree", HashDict) ==
+    { :ok, { :dict, outer_hash_dict } }
   end
 
   test "decoder closes dictionary" do
@@ -49,7 +53,8 @@ defmodule BencodeTest do
     |>  HashDict.put("maps", { :dict, inner_hash_dict })
     |>  HashDict.put("fleet", "helplessness")
 
-    assert decode("d4:mapsd5:perch2:ise5:fleet12:helplessnesse", HashDict) == { :dict, outer_hash_dict }
+    assert decode("d4:mapsd5:perch2:ise5:fleet12:helplessnesse", HashDict) ==
+    { :ok, { :dict, outer_hash_dict } }
   end
 
   test "encodes integer" do
@@ -84,8 +89,8 @@ defmodule BencodeTest do
 
   test "encoded dictionary matches original binary" do
     { :ok, orig_bin } = File.read("resrc/big.torrent")
-    enc_bin = decode orig_bin
-    |>  encode
+    { :ok, dec_dict } = decode orig_bin
+    enc_bin = encode(dec_dict) <> "\n"
     assert orig_bin == enc_bin
   end
 
