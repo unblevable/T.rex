@@ -10,7 +10,7 @@ defmodule Trex.Bencode do
   """
   def decode(bin, dict_impl // ListDict ) do
     # exclude the trailing character
-    { _, dict } = parse_bin(bin, dict_impl)
+    { _, dict } = bin |> String.rstrip |> parse_bin(dict_impl)
     { :ok, dict }
   end
 
