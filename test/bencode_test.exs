@@ -88,7 +88,7 @@ defmodule BencodeTest do
   end
 
   test "encoded dictionary matches original binary" do
-    { :ok, orig_bin } = File.read("resrc/big.torrent")
+    { :ok, orig_bin } = File.read("resrc/flagfromserver.torrent")
     { :ok, dec_dict } = decode orig_bin
     enc_bin = encode(dec_dict) <> "\n"
     assert orig_bin == enc_bin
