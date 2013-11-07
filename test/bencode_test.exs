@@ -6,8 +6,6 @@ defmodule BencodeTest do
 
   import Trex.Bencode
 
-  @eof ""
-
   test "decodes integer" do
     assert decode("i12345e") == { :ok, 12345 }
   end

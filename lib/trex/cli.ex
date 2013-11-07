@@ -70,10 +70,10 @@ defmodule Trex.Cli do
       -v, --version           show version number
     """
   end
-  defp process(uri) do
+  defp process(uri) when is_binary(uri) do
     uri
     |>  Path.relative_to_cwd
-    |>  Trex.IO.read
+    |>  Trex.Request.make
   end
   defp process({ _uri, _n }) do
   end

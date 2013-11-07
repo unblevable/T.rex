@@ -6,7 +6,6 @@ defmodule Trex.IO do
 
   def read(file) do
     File.read(file)
-    |>  parse
   end
 
   def parse({ :error, reason }), do: :file.format_error reason

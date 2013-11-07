@@ -75,7 +75,7 @@ defmodule Trex.Bencode do
     # resulting key-value pair into a list (for ease) and reduce the list into
     # a concatenated string
     dict_as_string = Enum.sort(dict, fn({ k0, _v0 }, { k1, _v1 }) -> k0 < k1 end)
-    |> Enum.map(fn({ k, v }) when is_integer(k) or is_binary(k) -> List.wrap(unparse k) ++ List.wrap(unparse v) end)
+    |>  Enum.map(fn({ k, v }) when is_integer(k) or is_binary(k) -> List.wrap(unparse k) ++ List.wrap(unparse v) end)
     |>  List.flatten
     |>  List.foldr "", fn(x, acc) -> to_string(x) <> to_string(acc) end
 
