@@ -1,5 +1,5 @@
-/resrc
-!/resrc/flagfromserver.torrent
+resrc/*
+!resrc/flagfromserver.torrent
 /ebin
 /deps
 erl_crash.dump

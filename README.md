@@ -1,6 +1,6 @@
 # T.rex
 
-A multi-threaded bittorrent client. (a work in progress)
+A multi-threaded bittorrent client (a work in progress)
 
 ## Command Line
 
