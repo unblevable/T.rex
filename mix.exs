@@ -17,7 +17,7 @@ defmodule Trex.Mixfile do
   # { :foobar, "~> 0.1", git: "https://github.com/elixir-lang/foobar.git" }
   defp deps do
     [
-      { :httpotion, git: "https://github/com/myfreeweb/httpotion" }
+      { :httpotion, github: "myfreeweb/httpotion" }
     ]
   end
 end

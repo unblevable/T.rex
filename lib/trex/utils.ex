@@ -5,8 +5,6 @@ defmodule Trex.Utils do
     |>  Dict.drop([:__behaviour__, :behaviour_info, :update])
 
     Enum.all?(filtered, fn(x) -> x in module.__info__(:exports) end)
-    # filtered
-    # |>  Enum.all?((&1 in module.__info__(:exports)))
   end
 
 end

@@ -1,2 +1,2 @@
-[ "httpotion": {:git, "https://github/com/myfreeweb/httpotion", "ee3cd8ad5630b20b236c0076c59e04fef973adbb", []},
+[ "httpotion": {:git, "git://github.com/myfreeweb/httpotion.git", "ee3cd8ad5630b20b236c0076c59e04fef973adbb", []},
   "ibrowse": {:git, "git://github.com/cmullaparthi/ibrowse.git", "2e13b63788f48934ab9b075b9d741bfa814d0d6d", []} ]
