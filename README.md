@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/unblevable/T.rex.png)](https://travis-ci.org/unblevable/T.rex)
 
-A multi-threaded bittorrent client (a work in progress)
+A concurrent bittorrent client (a work in progress)
 
 ## Command Line
 
