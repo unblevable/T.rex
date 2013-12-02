@@ -73,7 +73,7 @@ defmodule Trex.Cli do
   defp process(uri) when is_binary(uri) do
     uri
     |>  Path.relative_to_cwd
-    |>  Trex.Request.make
+    |>  Trex.Request.start
   end
   defp process({ _uri, _n }) do
   end

@@ -18,15 +18,33 @@ defmodule Trex.Bencode do
   Take a dictionary containing torrent metadata and encode it into a .torrent
   file.
   """
-  def encode(dict), do: unparse(dict)
+  def encode(dict) do
+    unparse(dict)
+  end
 
-  defp parse_bin(<<?i::utf8, tail::binary>>, _dict_impl), do: parse_int(tail, [])
-  defp parse_bin(<<?l::utf8, tail::binary>>, dict_impl),  do: parse_list(tail, [], dict_impl)
-  defp parse_bin(<<?d::utf8, tail::binary>>, dict_impl),  do: parse_dict(tail, dict_impl.new, dict_impl)
-  defp parse_bin(bin, _dict_impl),                        do: parse_str(bin, [])
+  defp parse_bin(<<?i::utf8, tail::binary>>, _dict_impl) do
+    parse_int(tail, [])
+  end
 
-  defp parse_int(<<?e::utf8, tail::binary>>, acc),    do: { tail, list_to_integer(acc) }
-  defp parse_int(<<head::utf8, tail::binary>>, acc),  do: parse_int(tail, acc ++ List.wrap(head))
+  defp parse_bin(<<?l::utf8, tail::binary>>, dict_impl) do
+    parse_list(tail, [], dict_impl)
+  end
+
+  defp parse_bin(<<?d::utf8, tail::binary>>, dict_impl) do
+    parse_dict(tail, dict_impl.new, dict_impl)
+  end
+
+  defp parse_bin(bin, _dict_impl) do
+    parse_str(bin, [])
+  end
+
+  defp parse_int(<<?e::utf8, tail::binary>>, acc) do
+    { tail, list_to_integer(acc) }
+  end
+
+  defp parse_int(<<head::utf8, tail::binary>>, acc) do
+    parse_int(tail, acc ++ List.wrap(head))
+  end
 
   defp parse_str(<<?:::utf8, tail::binary>>, acc) do
     # extract the integer that denotes the string's length
@@ -37,6 +55,7 @@ defmodule Trex.Bencode do
 
     { rem, str }
   end
+
   defp parse_str(<<head::utf8, tail::binary>>, acc) do
     parse_str(tail, acc ++ List.wrap(head))
   end
@@ -45,6 +64,7 @@ defmodule Trex.Bencode do
     # add type info for encoder
     { tail, { :list, acc } }
   end
+
   defp parse_list(bin, acc, dict_impl) do
     # recurse to check for other lists, etc.
     { val_tail, val } = parse_bin(bin, dict_impl)
@@ -55,6 +75,7 @@ defmodule Trex.Bencode do
     # add type info for encoder
     { tail, { :dict, acc } }
   end
+
   defp parse_dict(bin, acc, dict_impl) do
     # recurse to grab each key and recurse again to grab each value
     { key_tail, key } = parse_bin(bin, dict_impl)
@@ -63,19 +84,26 @@ defmodule Trex.Bencode do
     parse_dict(val_tail, Dict.put(acc, key, val), dict_impl)
   end
 
-  defp unparse(int) when is_integer(int), do: "i" <> to_string(int) <> "e"
-  defp unparse(str) when is_binary(str),  do: (size(str) |> to_string) <> ":" <> str
+  defp unparse(int) when is_integer(int) do
+    "i" <> to_string(int) <> "e"
+  end
+
+  defp unparse(str) when is_binary(str) do
+    (size(str) |> to_string) <> ":" <> str
+  end
+
   defp unparse({ :list, list }) when is_list(list) do
     # recurse on each item of a list
     comprehension = lc x inlist list, do: unparse(x)
     "l" <> to_string(comprehension) <> "e"
   end
+
   defp unparse({ :dict, dict }) do
     # sort the dictionary and encode each key and then each value; wrap the
     # resulting key-value pair into a list (for ease) and reduce the list into
     # a concatenated string
     dict_as_string = Enum.sort(dict, fn({ k0, _v0 }, { k1, _v1 }) -> k0 < k1 end)
-    |>  Enum.map(fn({ k, v }) when is_integer(k) or is_binary(k) -> List.wrap(unparse k) ++ List.wrap(unparse v) end)
+    |>  Enum.map(fn({ k, v }) -> List.wrap(unparse k) ++ List.wrap(unparse v) end)
     |>  List.flatten
     |>  List.foldr "", fn(x, acc) -> to_string(x) <> to_string(acc) end
 

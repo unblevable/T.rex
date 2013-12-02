@@ -5,3 +5,4 @@ resrc/*
 erl_crash.dump
 *.ez
 trex
+_build/
