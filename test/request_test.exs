@@ -2,7 +2,7 @@ defmodule RequestTest do
 
   use ExUnit.Case, async: true
 
-  import Trex.Request
+  # import Trex.Request
 
   test "creates request url" do
     dict = HashDict.new
