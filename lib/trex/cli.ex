@@ -17,6 +17,7 @@ defmodule Trex.Cli do
 
     case options do
       { [help: true], _, _ }        -> :help
+      # no arguments are given--add torrent and begin leeching
       { _, [uri], _ }               -> uri
       { [processes: n,], [uri], _ } -> { uri, n }
       _                             -> :help
@@ -71,9 +72,19 @@ defmodule Trex.Cli do
     """
   end
   defp process(uri) when is_binary(uri) do
-    uri
+    parse = uri
     |>  Path.relative_to_cwd
-    |>  Trex.Request.start
+    |>  Trex.IO.read
+    |>  Trex.IO.parse
+
+    case parse do
+      { :error, reason } ->
+        :io.format "~p~n", [reason]
+        System.halt 1
+      { :ok, meta_info } ->
+        meta_info
+        |>  Trex.Request.create
+    end
   end
   defp process({ _uri, _n }) do
   end
