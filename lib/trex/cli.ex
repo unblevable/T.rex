@@ -64,7 +64,7 @@ defmodule Trex.Cli do
       -c, --config            output config info
       -e, --exit              exit program
       -h, --help              output usage info
-      -l, --list [all]        list [active] torrents
+      -l, --list ["all"]      list ["active"] torrents
       -p, --processes [n]     spawn up to [1000] processes when applicable
       -r, --remove            remove torrent
       -t, --toggle            toggle torrent as active/inactive
@@ -83,7 +83,7 @@ defmodule Trex.Cli do
         System.halt 1
       { :ok, meta_info } ->
         meta_info
-        |>  Trex.Request.create
+        |>  Trex.Tracker.request
     end
   end
   defp process({ _uri, _n }) do
