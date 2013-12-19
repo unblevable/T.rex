@@ -4,7 +4,7 @@ defmodule Trex.Mixfile do
   def project do
     [ app: :trex,
       version: "0.0.1",
-      elixir: "~> 0.11.0",
+      elixir: "~> 0.12.0",
       deps: deps ]
   end
 
@@ -17,7 +17,7 @@ defmodule Trex.Mixfile do
   # { :foobar, "~> 0.1", git: "https://github.com/elixir-lang/foobar.git" }
   defp deps do
     [
-      { :httpotion, github: "myfreeweb/httpotion" }
+      { :httprot, github: "meh/httprot" }
     ]
   end
 end
