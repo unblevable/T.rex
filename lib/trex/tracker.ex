@@ -39,15 +39,31 @@ defmodule Trex.Tracker do
   end
 
   defp send_request(url) do
-    HTTPotion.start
-
-    case HTTPotion.get url, [{ "Accept", "*/*" }]  do
-      HTTPotion.Response[body: body, status_code: status_code] when status_code in 200..299 ->
-        { :dict, response } = Trex.Bencode.decode body
-        { :ok, response }
-      HTTPotion.Response[body: body] ->
-        { :error, body }
+    URI.Info[scheme: _, query: query, fragment: _, authority: _, userinfo: _, host: host, port: port] = URI.parse url
+    case :hackney.connect :hackney_tcp_transport, to_char_list(host), port, [] do
+      { :ok, connection } ->
+        case :hackney.send_request connection, { :get, "/announce?" <> query, [], '' } do
+          { :ok, status_code, headers, res } when status_code in 200..299 ->
+            case :hackney.body res do
+              { :ok, body } ->
+                Trex.Bencode.decode body
+              { :error, _ } ->
+                exit :bad_response
+            end
+          _ ->
+            exit :bad_status_code
+        { :error, _ } ->
+          exit :bad_request
+        end
+      { :error, _ } ->
+        exit :bad_connection
     end
+
+
+    # { :ok, _, _, res } = :hackney.send_request connection, { :get, "/announce?" <> query, [], '' }
+    # { :ok, body } = :hackney.body res
+
+    # Trex.Bencode.decode body
   end
 
 end
