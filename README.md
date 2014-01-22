@@ -22,3 +22,7 @@ A bittorrent client in Elixir. (A work in progress.)
       -r, --remove            remove torrent
       -t, --toggle            toggle torrent as active/inactive
       -v, --version           show version number
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/unblevable/t.rex/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
