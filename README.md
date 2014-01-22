@@ -1,6 +1,7 @@
 # T.rex
 
 [![Build Status](https://travis-ci.org/unblevable/T.rex.png)](https://travis-ci.org/unblevable/T.rex)
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/unblevable/t.rex/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 
 A bittorrent client in Elixir. (A work in progress.)
 
