@@ -3,9 +3,12 @@ notifications:
     recipients:
         - blsymph@gmail.com
 otp_release:
-    - R16B
+    - 17.1
 before_install:
     - git clone https://github.com/elixir-lang/elixir
     - cd elixir && git checkout v1.0.0 && make && cd ..
-before_script: "export PATH=`pwd`/elixir/bin:$PATH"
+before_script:
+    - export PATH=`pwd`/elixir/bin:$PATH
+    - mix local.hex --force
+    - mix deps.get
 script: "MIX_ENV=test mix do deps.get, test"
