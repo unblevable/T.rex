@@ -1,11 +1,2 @@
-[ "datastructures": {:git, "git://github.com/meh/elixir-datastructures.git", "8b497974ad511965dac5fe9e7b9b8762e1632a22", []},
-  "finalizer": {:git, "git://github.com/meh/elixir-finalizer.git", "9c38d9145824a46c66f1a010e137a953a6c78e04", []},
-  "hackney": {:git, "git://github.com/benoitc/hackney.git", "7011a86c4d6e9ca4a96784d05dda4d9cea14e768", []},
-  "hackney_lib": {:git, "https://github.com/benoitc/hackney_lib.git", "69b97266893703b180c9e5930027b5ca09d29f71", [{:tag, "0.1.1"}]},
-  "httpotion": {:git, "git://github.com/myfreeweb/httpotion.git", "ee3cd8ad5630b20b236c0076c59e04fef973adbb", []},
-  "httprot": {:git, "git://github.com/meh/httprot.git", "696d99ad3d479f77ebbb96f169e2e49708e2f652", []},
-  "ibrowse": {:git, "git://github.com/cmullaparthi/ibrowse.git", "2e13b63788f48934ab9b075b9d741bfa814d0d6d", []},
-  "managed_process": {:git, "git://github.com/meh/elixir-managed_process.git", "5b76aeb7adc87f108d8fc59b3e783a98a3d4310a", []},
-  "mimetypes": {:git, "git://github.com/spawngrid/mimetypes.git", "47d37a977a7d633199822bf6b08353007483d00f", [{:ref, "master"}]},
-  "resource": {:git, "git://github.com/tonyrog/resource.git", "b9e1adcadcc8cb59130e0bbecbbe6777bb8d7c78", []},
-  "socket": {:git, "git://github.com/meh/elixir-socket.git", "d42264e87519b2d9fed9e6f1517b0e6c43ac1e9f", []} ]
+%{"hackney": {:git, "git://github.com/benoitc/hackney.git", "88924b2df64837dbc06f03308dfe7d8c7be7b991", []},
+  "idna": {:git, "git://github.com/benoitc/erlang-idna.git", "5089240e653ce254273da9cff57952a60b1d2c51", [tag: "1.0.1"]}}

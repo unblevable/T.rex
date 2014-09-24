@@ -8,7 +8,7 @@ defmodule Trex.Bencode do
   Take a binary (from a .torrent file) and a Dict implementation and output a
   dictionary of that type (in no particular order) and contains the file's metadata.
   """
-  def decode(bin, dict_impl // ListDict ) do
+  def decode(bin, dict_impl \\ Map ) do
     # exclude the trailing character
     { _, dict } = bin |> String.rstrip |> parse_bin(dict_impl)
     { :ok, dict }
@@ -39,7 +39,7 @@ defmodule Trex.Bencode do
   end
 
   defp parse_int(<<?e::utf8, tail::binary>>, acc) do
-    { tail, list_to_integer(acc) }
+    { tail, List.to_integer(acc) }
   end
 
   defp parse_int(<<head::utf8, tail::binary>>, acc) do
@@ -48,10 +48,10 @@ defmodule Trex.Bencode do
 
   defp parse_str(<<?:::utf8, tail::binary>>, acc) do
     # extract the integer that denotes the string's length
-    str_len = list_to_integer acc
+    str_len = List.to_integer(acc)
 
     # extract what remains of the file to parse
-    <<str::[binary, size(str_len)], rem::binary>> = tail
+    <<str::binary-size(str_len), rem::binary>> = tail
 
     { rem, str }
   end
@@ -89,12 +89,12 @@ defmodule Trex.Bencode do
   end
 
   defp unparse(str) when is_binary(str) do
-    (size(str) |> to_string) <> ":" <> str
+    (byte_size(str) |> to_string) <> ":" <> str
   end
 
   defp unparse({ :list, list }) when is_list(list) do
     # recurse on each item of a list
-    comprehension = lc x inlist list, do: unparse(x)
+    comprehension = for x <- list, do: unparse(x)
     "l" <> to_string(comprehension) <> "e"
   end
 
