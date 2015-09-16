@@ -2,6 +2,8 @@ resrc/*
 !resrc/flagfromserver.torrent
 /ebin
 /deps
-erl_crash.dump
+*.dump
 *.ez
 _build/
+NOTES.md
+trex
