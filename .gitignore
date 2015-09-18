@@ -5,7 +5,7 @@
 *.dump
 *.ez
 
-/priv
-!/priv/flagfromserver.torrent
 /bin
+/priv/*
+!/priv/flagfromserver.torrent
 NOTES.md

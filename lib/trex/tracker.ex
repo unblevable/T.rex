@@ -7,6 +7,7 @@ defmodule Trex.Tracker do
 
   @peer_id_length 20
   @client_id_and_hyphens_length 4
+  @version Mix.Project.config[:version]
 
   @tracker_defaults %{
     port: 6881
@@ -52,14 +53,13 @@ defmodule Trex.Tracker do
     #   unique and random. The hash will be generated from a part of a SHA1
     #   hash of the running process id (which should be unique enough).
 
-    version     = Trex.Mixfile.project[:version]
-    hash_length = @peer_id_length - @client_id_and_hyphens_length - byte_size(version)
+    hash_length = @peer_id_length - @client_id_and_hyphens_length - byte_size(@version)
     hash        = :crypto.hash(:sha, System.get_pid) |> binary_part(0, hash_length)
-    peer_id     = "-RX#{version}-#{hash}"
+    peer_id     = "-RX#{@version}-#{hash}"
 
     # TODO: optional keys
     # TODO: BEP 23
-    request_params = [
+    request_params = %{
       info_hash: :crypto.hash(:sha, Bencode.encode(info)),
       peer_id: peer_id,
       # "ip" => "127.0.0.1",
@@ -68,7 +68,7 @@ defmodule Trex.Tracker do
       downloaded: 0,
       completed: length,
       event: "started"
-    ]
+    }
 
     announce <> "?" <> URI.encode_query(request_params)
   end
@@ -79,10 +79,10 @@ defmodule Trex.Tracker do
         body
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         IO.puts "404"
-        System.halt(1)
+        # System.halt(1)
       {:error, %HTTPoison.Error{reason: reason}} ->
         IO.inspect reason
-        System.halt(1)
+        # System.halt(1)
     end
   end
 end

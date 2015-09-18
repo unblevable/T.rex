@@ -8,7 +8,7 @@ defmodule Trex.Mixfile do
       app: :trex,
       version: @version,
       elixir: "~> 1.0.4",
-      escript: [main_module: Trex],
+      escript: [main_module: Trex, path: "bin/trex"],
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
       deps: deps,
