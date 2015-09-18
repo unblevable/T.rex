@@ -1,9 +1,11 @@
-resrc/*
-!resrc/flagfromserver.torrent
+/_build
 /ebin
 /deps
+
 *.dump
 *.ez
-_build/
+
+/priv
+!/priv/flagfromserver.torrent
 NOTES.md
 trex

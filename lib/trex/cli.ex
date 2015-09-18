@@ -1,9 +1,17 @@
 defmodule Trex.Cli do
-
-  @moduledoc"""
-  CLI command parser
+  @moduledoc """
+  CLI parser
   """
 
+  alias Trex.Tracker
+
+  @doc """
+  usage: trex <file> [options]
+
+  options:
+
+  -h, --help        output usage info
+  """
   def run(argv) do
     argv
     |>  parse
@@ -11,21 +19,21 @@ defmodule Trex.Cli do
   end
 
   defp parse(argv) do
-    options = OptionParser.parse(argv,[
-      switches: [help: :boolean, processes: :integer],
-      aliases: [h: :help, p: :processes]])
+    options =
+      OptionParser.parse(argv, [
+        switches: [help: :boolean],
+        aliases: [h: :help]
+      ])
 
     case options do
-      { [help: true], _, _ }        -> :help
-      # no arguments are given--add torrent and begin leeching
-      { _, [uri], _ }               -> uri
-      { [processes: n,], [uri], _ } -> { uri, n }
-      _                             -> :help
+      {[help: true], _, _}        -> :help
+      {_, [uri], _}               -> uri
+      _                           -> :help
     end
   end
 
   defp process(:help) do
-    IO.puts"""
+    IO.puts """
              .-=-==--==--.
        ..-=="  ,'o`)      `.
      ,'         `"'         \\
@@ -42,25 +50,24 @@ defmodule Trex.Cli do
                   ,-='_.-'      ``:%::)  )%:|        /:._,"
                  (/(/"           ," ,'_,'%%%:       (_,'
                                 (  (//(`.___;        \\
-    -                            \\     \\    `         `
-    T.rex                         `.    `.   `.        :
-    a multi-threaded bittorrent     \\. . .\    : . . . :
-    client written in Elixir.        \\. . .:    `.. . .:
+                                 \\     \\    `         `
+                                  `.    `.   `.        :
+    T.rex                           \\. . .\    : . . . :
+    A BitTorrent client in Elixir    \\. . .:    `.. . .:
     -                                 `..:.:\\     \\:...\\
     (CJ)[http://ascii.co.uk/art/trex]  ;:.:.;      ::...:
                                        ):%::       :::::;
                                    __,::%:(        :::::
                                 ,;:%%%%%%%:        ;:%::
-                                  ;,--""-.`\\  ,=--':%:%:\
+                                  ;,--""-.`\\  ,=--':%:%:\\
                                  /"       "| /-".:%%%%%%%\\
                                                  ;,-"'`)%%)
                                                 /"      "
-
     usage: trex [file|url|magnet] [options]
 
     options:
 
-      default                 add torrent and start leeching
+      default                 add torrent and start
       -c, --config            output config info
       -e, --exit              exit program
       -h, --help              output usage info
@@ -71,22 +78,21 @@ defmodule Trex.Cli do
       -v, --version           show version number
     """
   end
-  defp process(uri) when is_binary(uri) do
-    parse = uri
-    |>  Path.relative_to_cwd
-    |>  Trex.IO.read
-    |>  Trex.IO.parse
 
-    case parse do
-      { :error, reason } ->
-        :io.format "~p~n", [reason]
-        System.halt 1
-      { :ok, meta_info } ->
-        meta_info
-        |>  Trex.Tracker.request
+  # TODO: urls and magnets
+  defp process(uri) do
+    file =
+      uri
+      |> Path.relative_to_cwd
+      |> File.read
+
+    case file do
+      {:error, error} ->
+        :file.format(error)
+        System.halt(1)
+      {:ok, binary} ->
+        binary
+        |> Tracker.request
     end
   end
-  defp process({ _uri, _n }) do
-  end
-
 end

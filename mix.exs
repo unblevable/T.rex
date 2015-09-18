@@ -1,38 +1,28 @@
 defmodule Trex.Mixfile do
   use Mix.Project
 
+  @version "0.0.1"
+
   def project do
-    [ app: :trex,
+    [
+      app: :trex,
+      version: @version,
+      elixir: "~> 1.0.4",
       escript: [main_module: Trex],
-      version: "0.0.1",
-      elixir: "~> 1.0",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      deps: deps ]
-  end
-
-
-  # Configuration for the OTP application
-  #
-  # Type `mix help compile.app` for more information
-  def application do
-    [applications: [:hackney]]
-  end
-
-
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type `mix help deps` for more examples and options
-  defp deps do
-    [
-      # { :httprot, github: "meh/httprot" },
-      { :hackney, github: "benoitc/hackney" }
+      deps: deps,
+      name: "T.rex",
+      source_url: "https://github.com/unblevable/T.rex",
+      description: "A BitTorrent client in Elixir."
     ]
+  end
+
+  def application do
+    [applications: [:httpoison]]
+  end
+
+  defp deps do
+    [{:httpoison, "~>0.7.3"}]
   end
 end

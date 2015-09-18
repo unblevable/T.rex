@@ -1,69 +1,88 @@
 defmodule Trex.Tracker do
-
   @moduledoc"""
-  Send a request to a tracker and receive a response.
+  Tracker requests/responses.
   """
 
-  @is_response_compact  "1"
-  @num_wanted_peers     "50"
-  @port                 "6881"
+  alias Trex.Bencode
 
-  @doc"""
-  Send a GET request to the tracker.
+  @peer_id_length 20
+  @client_id_and_hyphens_length 4
+
+  @tracker_defaults %{
+    port: 6881
+  }
+
+  @doc """
+  Creates and sends a GET request to the tracker and returns its response.
   """
-  def request(metainfo) do
-    create_request(metainfo)
+  def request(binary) do
+    binary
+    |> Bencode.decode
+    |> create_request
     |> send_request
+    |> Bencode.decode
   end
 
   defp create_request(metainfo) do
-    { :dict , raw_metainfo } = metainfo
+    # TODO: optional keys
+    # TODO: multiple-file torrents
+    %{
+      announce: announce,
+      info: info = %{
+        "piece length": piece_length,
+        pieces: pieces,
+        name: name,
+        length: length
+      }
+    } = metainfo
 
-    announce  = Dict.get(raw_metainfo, "announce")
-    raw_info  = Dict.get(raw_metainfo, "info")
-    info_hash = :crypto.hash(:sha, raw_info |> Trex.Bencode.encode)
+    # Follow an "Azureus-style"-inspired convention for a unique peer id that
+    # is exactly 20 bytes long.
+    #
+    # -RX0.0.1-cf23df2207d9e
+    #  ^ ^     ^
+    #
+    # * T.rex's client id
+    #
+    # * Version number
+    #   This will be variable length.
+    #
+    # * Hash
+    #   This should fill the remaining bytes in the peer id. It is meant to be
+    #   unique and random. The hash will be generated from a part of a SHA1
+    #   hash of the running process id (which should be unique enough).
 
-    params = [{ "compact", @is_response_compact },
-        { "downloaded", Trex.Event.get_downloaded info_hash },
-        { "event",      Trex.Event.get info_hash },
-        { "info_hash",  info_hash },
-        { "left",       Trex.Event.get_left info_hash },
-        { "numwant",    @num_wanted_peers },
-        { "peer_id",    :crypto.rand_bytes(20) },
-        { "port",       Trex.Client.port },
-        { "uploaded",   Trex.Event.get_uploaded info_hash }]
-    |>  Enum.reject(fn({ _k, v }) -> v == nil end)
-    |>  Enum.map(fn({ k, v }) -> k <> "=" <> (v |> URI.encode) end)
+    version     = Trex.Mixfile.project[:version]
+    hash_length = @peer_id_length - @client_id_and_hyphens_length - byte_size(version)
+    hash        = :crypto.hash(:sha, System.get_pid) |> binary_part(0, hash_length)
+    peer_id     = "-RX#{version}-#{hash}"
 
-    announce <> "?" <> (params |> Enum.join "&")
+    # TODO: optional keys
+    # TODO: BEP 23
+    request_params = [
+      info_hash: :crypto.hash(:sha, Bencode.encode(info)),
+      peer_id: peer_id,
+      # "ip" => "127.0.0.1",
+      port:  @tracker_defaults[:port],
+      uploaded: 0,
+      downloaded: 0,
+      completed: length,
+      event: "started"
+    ]
+
+    announce <> "?" <> URI.encode_query(request_params)
   end
 
-  defp send_request(url) do
-    # %URI.Info{scheme: _, query: query, fragment: _, authority: _, userinfo: _, host: host, port: port} = URI.parse url
-    # case :hackney.connect :hackney_tcp_transport, to_char_list(host), port, [] do
-    #   { :ok, connection } ->
-    #     case :hackney.send_request connection, { :get, "/announce?" <> query, [], '' } do
-    #       { :ok, status_code, headers, res } when status_code in 200..299 ->
-    #         case :hackney.body res do
-    #           { :ok, body } ->
-    #             { :ok, raw_body } = Trex.Bencode.decode body
-    #           { :error, _ } ->
-    #             exit :bad_response
-    #         end
-    #       _ ->
-    #         exit :bad_status_code
-    #     { :error, _ } ->
-    #       exit :bad_request
-    #     end
-    #   { :error, _ } ->
-    #     exit :bad_connection
-    # end
-
-
-    # { :ok, _, _, res } = :hackney.send_request connection, { :get, "/announce?" <> query, [], '' }
-    # { :ok, body } = :hackney.body res
-
-    # Trex.Bencode.decode body
+  defp send_request(uri) do
+    case HTTPoison.get(uri) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
+        body
+      {:ok, %HTTPoison.Response{status_code: 404}} ->
+        IO.puts "404"
+        System.halt(1)
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect reason
+        System.halt(1)
+    end
   end
-
 end
