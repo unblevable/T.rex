@@ -5,7 +5,10 @@ notifications:
     - blsymph@gmail.com
 otp_release:
   - 17.1
+# to run on faster container-based infastructure
 sudo: false
+env:
+  - MIX_ENV=test
 before_script:
   - mix deps.get
 script: mix test
