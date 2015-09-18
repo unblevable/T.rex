@@ -3,8 +3,13 @@ defmodule CliTest do
 
   doctest Trex.Cli
   alias Trex.Cli
+  import ExUnit.CaptureIO
 
   test "passing no arguments outputs usage info" do
-    assert Cli.run([]) == Cli.run(["--help"])
+    assert capture_io(fn ->
+      Cli.run([])
+    end) == capture_io(fn ->
+      Cli.run(["--help"])
+    end)
   end
 end
