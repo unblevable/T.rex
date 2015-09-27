@@ -4,6 +4,7 @@ defmodule Trex.Cli do
   """
 
   alias Trex.Tracker
+  alias Trex.Peer
 
   @doc """
   usage: trex <file> [options]
@@ -89,10 +90,11 @@ defmodule Trex.Cli do
     case file do
       {:error, error} ->
         :file.format(error)
-        System.halt(1)
+        # System.halt(1)
       {:ok, binary} ->
         binary
         |> Tracker.request
+        |> Peer.connect
     end
   end
 end

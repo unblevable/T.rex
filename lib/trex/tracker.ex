@@ -5,9 +5,10 @@ defmodule Trex.Tracker do
 
   alias Trex.Bencode
 
+  @version Mix.Project.config[:version]
+  @client_id "RX"
   @peer_id_length 20
   @client_id_and_hyphens_length 4
-  @version Mix.Project.config[:version]
 
   @tracker_defaults %{
     port: 6881
@@ -21,7 +22,7 @@ defmodule Trex.Tracker do
     |> Bencode.decode
     |> create_request
     |> send_request
-    |> Bencode.decode
+    # |> Bencode.decode
   end
 
   defp create_request(metainfo) do
@@ -55,28 +56,34 @@ defmodule Trex.Tracker do
 
     hash_length = @peer_id_length - @client_id_and_hyphens_length - byte_size(@version)
     hash        = :crypto.hash(:sha, System.get_pid) |> binary_part(0, hash_length)
-    peer_id     = "-RX#{@version}-#{hash}"
+    # hash        = :crypto.rand_bytes(hash_length)
+    peer_id     = "-" <> @client_id <> @version <> "-" <> hash
+    peer_id     = "-AZ4004-znmphhbrij37"
+
+    info_hash = :crypto.hash(:sha, Bencode.encode(info))
 
     # TODO: optional keys
     # TODO: BEP 23
     request_params = %{
-      info_hash: :crypto.hash(:sha, Bencode.encode(info)),
+      info_hash: info_hash,
       peer_id: peer_id,
       # "ip" => "127.0.0.1",
       port:  @tracker_defaults[:port],
       uploaded: 0,
       downloaded: 0,
-      completed: length,
-      event: "started"
-    }
+      left: length,
+      event: "started",
+      compact: 1
+    } |> URI.encode_query
 
-    announce <> "?" <> URI.encode_query(request_params)
+    {announce <> "?" <> request_params, {info_hash, peer_id}}
   end
 
-  defp send_request(uri) do
+  defp send_request(state) do
+    {uri, rest} = state
     case HTTPoison.get(uri) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        body
+        {Bencode.decode(body), rest}
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         IO.puts "404"
         # System.halt(1)

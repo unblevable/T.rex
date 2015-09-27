@@ -19,10 +19,12 @@ defmodule Trex.Mixfile do
   end
 
   def application do
-    [applications: [:httpoison]]
+    [applications: [:crypto, :httpoison]]
   end
 
   defp deps do
-    [{:httpoison, "~>0.7.3"}]
+    [
+      {:httpoison, "~>0.7.3"},
+    ]
   end
 end

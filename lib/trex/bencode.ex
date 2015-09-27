@@ -10,12 +10,16 @@ defmodule Trex.Bencode do
 
       iex> Trex.Bencode.decode("4:spam")
       "spam"
+
       iex> Trex.Bencode.decode("i3e")
       3
+
       iex> Trex.Bencode.decode("l4:spam4:eggse")
       ["spam", "eggs"]
+
       iex> Trex.Bencode.decode("d3:cow3:moo4:spam4:eggse")
       %{cow: "moo", spam: "eggs"}
+
       iex> Trex.Bencode.decode("d4:spaml1:a1:bee")
       %{spam: ["a", "b"]}
 
@@ -34,12 +38,16 @@ defmodule Trex.Bencode do
 
       iex> Trex.Bencode.encode("spam")
       "4:spam"
+
       iex> Trex.Bencode.encode(3)
       "i3e"
+
       iex> Trex.Bencode.encode(["spam", "eggs"])
       "l4:spam4:eggse"
+
       iex> Trex.Bencode.encode(%{"cow" => "moo", "spam" => "eggs"})
       "d3:cow3:moo4:spam4:eggse"
+
       iex> Trex.Bencode.encode(%{spam: ["a", "b"]})
       "d4:spaml1:a1:bee"
 
@@ -120,11 +128,11 @@ defmodule Trex.Bencode do
     encoded_dictionary =
       dictionary
       |> Enum.sort
-      |> Enum.map(fn({k, v}) ->
+      |> Enum.map(fn {k, v} ->
         (k |> unparse |> List.wrap) ++ (v |> unparse |> List.wrap)
       end)
       |> List.flatten
-      |> List.foldr("", fn(x, acc) -> to_string(x) <> to_string(acc) end)
+      |> List.foldr("", fn x, acc -> to_string(x) <> to_string(acc) end)
 
     "d" <> encoded_dictionary <> "e"
   end
