@@ -55,10 +55,10 @@ defmodule Trex.Tracker do
     #   hash of the running process id (which should be unique enough).
 
     hash_length = @peer_id_length - @client_id_and_hyphens_length - byte_size(@version)
-    hash        = :crypto.hash(:sha, System.get_pid) |> binary_part(0, hash_length)
-    # hash        = :crypto.rand_bytes(hash_length)
+    # hash        = :crypto.hash(:sha, System.get_pid) |> binary_part(0, hash_length)
+    hash        = :crypto.rand_bytes(hash_length)
     peer_id     = "-" <> @client_id <> @version <> "-" <> hash
-    peer_id     = "-AZ4004-znmphhbrij37"
+    # peer_id     = "-AZ4004-znmphhbrij37"
 
     info_hash = :crypto.hash(:sha, Bencode.encode(info))
 
