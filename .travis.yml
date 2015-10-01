@@ -1,10 +1,10 @@
 language: elixir
-elixir: 1.0.4
+elixir: 1.1.1
 notifications:
   recipients:
     - blsymph@gmail.com
 otp_release:
-  - 17.1
+  - 18
 # to run on faster container-based infastructure
 sudo: false
 env:
