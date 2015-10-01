@@ -56,28 +56,28 @@ defmodule Trex.Bencode do
     unparse(data)
   end
 
-  defp parse(<<?i::utf8, tail::binary>>), do: parse_integer(tail, [])
-  defp parse(<<?l::utf8, tail::binary>>), do: parse_list(tail, [])
-  defp parse(<<?d::utf8, tail::binary>>), do: parse_dictionary(tail, %{})
-  defp parse(binary),                     do: parse_string(binary, [])
+  defp parse(<<?i::utf8, tail::bytes>>), do: parse_integer(tail, [])
+  defp parse(<<?l::utf8, tail::bytes>>), do: parse_list(tail, [])
+  defp parse(<<?d::utf8, tail::bytes>>), do: parse_dictionary(tail, %{})
+  defp parse(binary),                    do: parse_string(binary, [])
 
-  defp parse_integer(<<?e::utf8, tail::binary>>, acc),   do: {tail, List.to_integer(acc)}
-  defp parse_integer(<<head::utf8, tail::binary>>, acc), do: parse_integer(tail, acc ++ List.wrap(head))
+  defp parse_integer(<<?e::utf8, tail::bytes>>, acc),   do: {tail, List.to_integer(acc)}
+  defp parse_integer(<<head::utf8, tail::bytes>>, acc), do: parse_integer(tail, acc ++ List.wrap(head))
 
-  defp parse_string(<<?:::utf8, tail::binary>>, acc) do
+  defp parse_string(<<?:::utf8, tail::bytes>>, acc) do
     length = List.to_integer(acc)
 
     # Extract the integer prefix that denotes the string's length
-    <<string::binary-size(length), rest::binary>> = tail
+    <<string::bytes-size(length), rest::bytes>> = tail
 
     {rest, string}
   end
 
-  defp parse_string(<<head::utf8, tail::binary>>, acc) do
+  defp parse_string(<<head::utf8, tail::bytes>>, acc) do
     parse_string(tail, acc ++ List.wrap(head))
   end
 
-  defp parse_list(<<?e::utf8, tail::binary>>, acc) do
+  defp parse_list(<<?e::utf8, tail::bytes>>, acc) do
     {tail, acc}
   end
 
@@ -88,7 +88,7 @@ defmodule Trex.Bencode do
     parse_list(val_rest, acc ++ [val])
   end
 
-  defp parse_dictionary(<<?e::utf8, tail::binary>>, acc) do
+  defp parse_dictionary(<<?e::utf8, tail::bytes>>, acc) do
     {tail, acc}
   end
 

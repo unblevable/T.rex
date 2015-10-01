@@ -28,38 +28,13 @@ defmodule Trex.Peer do
 
     # create handshake message
     pstr = "BitTorrent protocol"
-    # pstrlen = pstr |> String.length |> Integer.to_string
-    pstrlen = "19"
+    pstrlen = <<byte_size(pstr)>>
     message = pstrlen <> pstr <> <<0, 0, 0, 0, 0, 0, 0, 0>> <> info_hash <> peer_id
 
-    IO.inspect peer_id
     peers = parse_peers_binary(peers, [])
-    handshake(peers, message)
+    handshake(peers, message, {info_hash})
 
-    # {ip, port} = peer
-    # {:ok, socket} = :gen_tcp.connect({96, 126, 104, 219}, 54308, [:binary, active: :once], 3_000)
-    # :inet.setopts(socket, [active: n])
-
-    # handshake_message = to_string([
-    #   19,
-    #   "BitTorrent protocol",
-    #   <<0, 0, 0, 0, 0, 0, 0, 0>>,
-    #   info_hash,
-    #   "-AZ4004-znmphhbrij37"
-    # ])
-
-    # list of {ip, port}'s
-    # map
-    # if success continue
-    # else loop
-
-    # <<
-    #   pstrlen::size(8),
-    #   pstr::binary-size(19),
-    #   reserved::binary-size(8),
-    #   _::binary
-    # >> = "19" <> "BitTorrent protocol" <> <<0, 0, 0, 0, 0, 0, 0, 0>> <>
-    # # TODO: change into a record?
+    # TODO: change into a record?
     # state = %{
     #   # peer is choking client
     #   is_choked: 1,
@@ -71,7 +46,7 @@ defmodule Trex.Peer do
   # peers is a binary string consisting of 6 bytes for each peer. first 4
   # bytes are each octet the peer's ip address, last 2 bytes are for the port
   # number (big endian which is implied)
-  def parse_peers_binary(<<a::integer-size(8), b::integer-size(8), c::integer-size(8), d::integer-size(8)>> <> <<port::integer-size(16), rest::binary>>, acc) do
+  def parse_peers_binary(<<a, b, c, d, port::integer-size(16), rest::bytes>>, acc) do
     ipv4 = {a, b, c, d}
     parse_peers_binary(rest, [{ipv4, port} | acc])
   end
@@ -80,38 +55,64 @@ defmodule Trex.Peer do
     acc
   end
 
-  def handshake([{ip, port} | peers], message) do
-    case :gen_tcp.connect(ip, port, [:binary, active: true], @timeout) do
+  # TODO: cleanup, refactor into more functions?
+  # TODO: [active: :once]
+  def handshake([{ip, port} | peers], message, state) do
+    case :gen_tcp.connect(ip, port, [:binary, active: :once], @timeout) do
       {:ok, socket} ->
-        :gen_tcp.send(socket, message)
-        receive do
-          {:tcp, socket, data} ->
-            {ip, port, socket, data}
-          {:tcp_closed, socket} ->
-            IO.puts "The socket is closed."
-            IO.inspect ip
-            IO.puts port
-            # :inet.setopts(socket, [active: :once])
-            handshake(peers, message)
-          {:tcp_error, socket, reason} ->
-            IO.puts "An error occurred on the socket."
-            {ip, port, reason}
-        after
-          @timeout ->
-            IO.puts ":gen_tcp.send/2 timed out after #{div(@timeout,  1_000)} seconds."
-            # :inet.setopts(socket, [active: :once])
-            handshake(peers, message)
-        end
+        receive_handshake(peers, message, socket, state)
       {:error, :timeout} ->
         IO.puts ":gen_tcp.connect/2 timed out after #{div(@timeout, 1_000)} seconds."
-        handshake(peers, message)
+        handshake(peers, message, state)
+      {:error, :econnrefused} ->
+        IO.puts ":gen_tcp.connect/2 was refused a connection."
+        handshake(peers, message, state)
       {:error, reason} ->
         {:error, reason}
     end
 
   end
 
-  def handshake(_, message) do
+  def handshake(_, _message, _state) do
     IO.puts "No more peers."
+  end
+
+  def receive_handshake(peers, message, socket, state) do
+    :gen_tcp.send(socket, message)
+    receive do
+      {:tcp, socket, data} ->
+        case data do
+          <<
+            19,
+            "BitTorrent protocol",
+            reserved::bytes-size(8),
+            info_hash::bytes-size(20),
+            peer_id::bytes-size(20),
+            rest::bytes
+          >> ->
+            {info} = state
+            if info_hash == info  do
+              IO.puts "success"
+            else
+              IO.puts "info_hashes don't match"
+            end
+          _ ->
+            IO.puts "rest"
+            IO.inspect data
+        end
+
+        {socket, data}
+      {:tcp_closed, socket} ->
+        IO.puts "The socket is closed."
+        :inet.setopts(socket, [active: :once])
+        handshake(peers, message, state)
+      {:tcp_error, socket, reason} ->
+        IO.puts "An error occurred on the socket.: #{reason}"
+    after
+      @timeout ->
+        IO.puts ":gen_tcp.send/2 timed out after #{div(@timeout,  1_000)} seconds."
+        :inet.setopts(socket, [active: :once])
+        handshake(peers, message, state)
+    end
   end
 end
