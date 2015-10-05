@@ -3,6 +3,8 @@ defmodule Trex.Peer do
   Peer communication.
   """
 
+  alias Trex.Messages
+
   @timeout 2_000
 
   @doc """
@@ -93,9 +95,13 @@ defmodule Trex.Peer do
             {info} = state
             if info_hash == info  do
               IO.puts "success"
+              # TODO: handle tracking peers by id
+              Messages.start(socket)
+              Messages.get(rest)
             else
               IO.puts "info_hashes don't match"
             end
+            :ok
           _ ->
             IO.puts "rest"
             IO.inspect data
