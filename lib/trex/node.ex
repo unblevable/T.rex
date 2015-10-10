@@ -17,7 +17,7 @@ defmodule Trex.Node do
 
   def init(state) do
     # `reuseaddr: true` allows us to reuse the address if the listener crashes
-    case :gen_tcp.listen(@port, [:binary, active: :once, reuseaddr: true]) do
+    case :gen_tcp.listen(@port, [:binary, reuseaddr: true]) do
       {:ok, listen} ->
         loop(listen)
       {:error, reason} ->
@@ -29,11 +29,20 @@ defmodule Trex.Node do
   end
 
   def loop(socket) do
+    :inet.setopts(socket, [active: :once])
     # TODO: @timeout
     case :gen_tcp.accept(socket) do
       {:ok, accept} ->
-        GenServer.cast(self(), {:message, message})
-        loop(socket)
+        receive do
+          {:tcp, socket, data} ->
+            GenServer.cast(self(), {:message, data})
+            loop(socket)
+          {:tcp_closed, socket} ->
+            IO.puts "Socket closed."
+          {:tcp_error, socket, reason} ->
+            IO.puts "Error:"
+            IO.inspect reason
+        end
       {:error, reason} ->
         IO.puts "Error:"
         IO.inspect reason
