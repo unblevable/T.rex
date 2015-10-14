@@ -4,6 +4,7 @@ defmodule Trex.Tracker do
   """
 
   alias Trex.Bencode
+  alias Trex.Peer
 
   @version Mix.Project.config[:version]
   @client_id "RX"
@@ -18,14 +19,19 @@ defmodule Trex.Tracker do
   Creates and sends a GET request to the tracker and returns its response.
   """
   def request(binary) do
-    binary
-    |> Bencode.decode
-    |> create_request
+    {announce, request_params} =
+      binary
+      |> Bencode.decode
+      |> get_request_params
+
+    Peer.start_link({request_params[:peer_id], request_params[:info_hash]})
+
+    announce <> "?" <> URI.encode_query(request_params)
     |> send_request
-    # |> Bencode.decode
+    |> Bencode.decode
   end
 
-  defp create_request(metainfo) do
+  defp get_request_params(metainfo) do
     # TODO: optional keys
     # TODO: multiple-file torrents
     %{
@@ -44,12 +50,12 @@ defmodule Trex.Tracker do
     # -RX0.0.1-cf23df2207d9e
     #  ^ ^     ^
     #
-    # * T.rex's client id
+    # + T.rex's client id
     #
-    # * Version number
+    # + Version number
     #   This will be variable length.
     #
-    # * Hash
+    # + Hash
     #   This should fill the remaining bytes in the peer id. It is meant to be
     #   unique and random. The hash will be generated from a part of a SHA1
     #   hash of the running process id (which should be unique enough).
@@ -72,16 +78,16 @@ defmodule Trex.Tracker do
       left: length,
       event: "started",
       compact: 1
-    } |> URI.encode_query
+    }
 
-    {announce <> "?" <> request_params, {info_hash, peer_id}}
+    {announce, request_params}
   end
 
-  defp send_request(state) do
-    {uri, rest} = state
+  # TODO: better error handling
+  defp send_request(uri) do
     case HTTPoison.get(uri) do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
-        {Bencode.decode(body), rest}
+        body
       {:ok, %HTTPoison.Response{status_code: 404}} ->
         IO.puts "404"
         # System.halt(1)

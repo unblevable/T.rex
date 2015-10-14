@@ -19,7 +19,7 @@ defmodule Trex.Mixfile do
   end
 
   def application do
-    [applications: [:crypto, :httpoison]]
+    [applications: [:crypto, :httpoison, :logger]]
   end
 
   defp deps do
