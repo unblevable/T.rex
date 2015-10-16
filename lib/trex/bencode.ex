@@ -26,7 +26,7 @@ defmodule Trex.Bencode do
   """
   def decode(binary) do
     binary
-    |> parse
+    |> decode_type
     # Extract the decoded binary from the accumulator
     |> elem(0)
   end
@@ -53,95 +53,94 @@ defmodule Trex.Bencode do
 
   """
   def encode(data) do
-    unparse(data)
+    encode_type(data)
   end
 
-  defp parse(<<?i::utf8, tail::bytes>>), do: parse_integer(tail, [])
-  defp parse(<<?l::utf8, tail::bytes>>), do: parse_list(tail, [])
-  defp parse(<<?d::utf8, tail::bytes>>), do: parse_dictionary(tail, %{})
-  defp parse(binary),                    do: parse_string(binary, [])
+  defp decode_type(<<?i::utf8, tail::bytes>>), do: decode_integer(tail, [])
+  defp decode_type(<<?l::utf8, tail::bytes>>), do: decode_list(tail, [])
+  defp decode_type(<<?d::utf8, tail::bytes>>), do: decode_dictionary(tail, %{})
+  defp decode_type(binary),                    do: decode_string(binary, [])
 
-  defp parse_integer(<<?e::utf8, tail::bytes>>, acc) do
+  defp decode_integer(<<?e::utf8, tail::bytes>>, acc) do
     acc =
       acc
       |> Enum.reverse
       |> List.to_integer
     {acc, tail}
   end
-  defp parse_integer(<<head::utf8, tail::bytes>>, acc) do
-    parse_integer(tail, [head | acc])
+
+  defp decode_integer(<<head::utf8, tail::bytes>>, acc) do
+    decode_integer(tail, [head | acc])
   end
 
-  defp parse_string(<<?:::utf8, tail::bytes>>, acc) do
-    length =
+  defp decode_string(<<?:::utf8, tail::bytes>>, acc) do
+    size =
       acc
       |> Enum.reverse
       |> List.to_integer
 
     # Extract the integer prefix that denotes the string's length
-    <<string::bytes-size(length), rest::bytes>> = tail
+    <<string::bytes-size(size), rest::bytes>> = tail
 
     {string, rest}
   end
 
-  defp parse_string(<<head::utf8, tail::bytes>>, acc) do
-    parse_string(tail, [head | acc])
+  defp decode_string(<<head::utf8, tail::bytes>>, acc) do
+    decode_string(tail, [head | acc])
   end
 
-  defp parse_list(<<?e::utf8, tail::bytes>>, acc) do
+  defp decode_list(<<?e::utf8, tail::bytes>>, acc) do
     {Enum.reverse(acc), tail}
   end
 
-  defp parse_list(binary, acc) do
+  defp decode_list(binary, acc) do
     # Recursively decode each item in the list
-    {val, val_rest} = parse(binary)
+    {val, val_rest} = decode_type(binary)
 
-    parse_list(val_rest, [val | acc])
+    decode_list(val_rest, [val | acc])
   end
 
-  defp parse_dictionary(<<?e::utf8, tail::bytes>>, acc) do
+  defp decode_dictionary(<<?e::utf8, tail::bytes>>, acc) do
     {acc, tail}
   end
 
-  defp parse_dictionary(binary, acc) do
+  defp decode_dictionary(binary, acc) do
     # The key must be a string.
-    {key, key_rest} = parse_string(binary, [])
+    {key, key_rest} = decode_string(binary, [])
 
     # Recursively decode each value
-    {val, val_rest} = parse(key_rest)
+    {val, val_rest} = decode_type(key_rest)
 
     # Decode the key as an atom for convenience
     rest = Map.put(acc, String.to_atom(key), val)
 
-    parse_dictionary(val_rest, rest)
+    decode_dictionary(val_rest, rest)
   end
 
-  defp unparse(integer) when is_integer(integer) do
+  defp encode_type(integer) when is_integer(integer) do
     "i" <> Integer.to_string(integer) <> "e"
   end
 
-  defp unparse(string) when is_binary(string) do
+  defp encode_type(string) when is_binary(string) do
     (string |> byte_size |> Integer.to_string) <> ":" <> string
   end
 
-  defp unparse(atom) when is_atom(atom) do
-    atom |> Atom.to_string |> unparse
+  defp encode_type(atom) when is_atom(atom) do
+    atom |> Atom.to_string |> encode_type
   end
 
-  defp unparse(list) when is_list(list) do
+  defp encode_type(list) when is_list(list) do
     # Recursively encode each item in the list
-    "l" <> (list |> Enum.map(&unparse/1) |> List.to_string) <> "e"
+    "l" <> (list |> Enum.map(&encode_type/1) |> List.to_string) <> "e"
   end
 
-  defp unparse(dictionary) when is_map(dictionary) do
+  defp encode_type(dictionary) when is_map(dictionary) do
     # Sort by key and recursively encode each key and value. Then, reduce the
     # dictionary into a string.
     dictionary =
       dictionary
       |> Enum.sort
-      |> Enum.map(fn {k, v} ->
-        unparse(k) <> unparse(v)
-      end)
+      |> Enum.map(fn {k, v} -> encode_type(k) <> encode_type(v) end)
       |> Enum.reduce("", fn x, acc -> acc <> x end)
 
     "d" <> dictionary <> "e"
