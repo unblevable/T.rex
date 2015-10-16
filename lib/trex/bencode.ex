@@ -28,7 +28,7 @@ defmodule Trex.Bencode do
     binary
     |> parse
     # Extract the decoded binary from the accumulator
-    |> elem(1)
+    |> elem(0)
   end
 
   @doc """
@@ -61,7 +61,7 @@ defmodule Trex.Bencode do
   defp parse(<<?d::utf8, tail::bytes>>), do: parse_dictionary(tail, %{})
   defp parse(binary),                    do: parse_string(binary, [])
 
-  defp parse_integer(<<?e::utf8, tail::bytes>>, acc),   do: {tail, List.to_integer(acc)}
+  defp parse_integer(<<?e::utf8, tail::bytes>>, acc),   do: {List.to_integer(acc), tail}
   defp parse_integer(<<head::utf8, tail::bytes>>, acc), do: parse_integer(tail, acc ++ List.wrap(head))
 
   defp parse_string(<<?:::utf8, tail::bytes>>, acc) do
@@ -70,7 +70,7 @@ defmodule Trex.Bencode do
     # Extract the integer prefix that denotes the string's length
     <<string::bytes-size(length), rest::bytes>> = tail
 
-    {rest, string}
+    {string, rest}
   end
 
   defp parse_string(<<head::utf8, tail::bytes>>, acc) do
@@ -78,26 +78,26 @@ defmodule Trex.Bencode do
   end
 
   defp parse_list(<<?e::utf8, tail::bytes>>, acc) do
-    {tail, acc}
+    {acc, tail}
   end
 
   defp parse_list(binary, acc) do
     # Recursively decode each item in the list
-    {val_rest, val} = parse(binary)
+    {val, val_rest} = parse(binary)
 
     parse_list(val_rest, acc ++ [val])
   end
 
   defp parse_dictionary(<<?e::utf8, tail::bytes>>, acc) do
-    {tail, acc}
+    {acc, tail}
   end
 
   defp parse_dictionary(binary, acc) do
     # The key must be a string.
-    {key_rest, key} = parse_string(binary, [])
+    {key, key_rest} = parse_string(binary, [])
 
     # Recursively decode each value
-    {val_rest, val} = parse(key_rest)
+    {val, val_rest} = parse(key_rest)
 
     # Decode the key as an atom for convenience
     rest = Map.put(acc, String.to_atom(key), val)
