@@ -56,41 +56,41 @@ defmodule Trex.Bencode do
     encode_type(data)
   end
 
-  defp decode_type(<<?i::utf8, tail::bytes>>), do: decode_integer(tail, [])
-  defp decode_type(<<?l::utf8, tail::bytes>>), do: decode_list(tail, [])
-  defp decode_type(<<?d::utf8, tail::bytes>>), do: decode_dictionary(tail, %{})
+  defp decode_type(<<?i::utf8, rest::bytes>>), do: decode_integer(rest, [])
+  defp decode_type(<<?l::utf8, rest::bytes>>), do: decode_list(rest, [])
+  defp decode_type(<<?d::utf8, rest::bytes>>), do: decode_dictionary(rest, %{})
   defp decode_type(binary),                    do: decode_string(binary, [])
 
-  defp decode_integer(<<?e::utf8, tail::bytes>>, acc) do
+  defp decode_integer(<<?e::utf8, rest::bytes>>, acc) do
     acc =
       acc
       |> Enum.reverse
       |> List.to_integer
-    {acc, tail}
+    {acc, rest}
   end
 
-  defp decode_integer(<<head::utf8, tail::bytes>>, acc) do
-    decode_integer(tail, [head | acc])
+  defp decode_integer(<<head::utf8, rest::bytes>>, acc) do
+    decode_integer(rest, [head | acc])
   end
 
-  defp decode_string(<<?:::utf8, tail::bytes>>, acc) do
+  defp decode_string(<<?:::utf8, rest::bytes>>, acc) do
     size =
       acc
       |> Enum.reverse
       |> List.to_integer
 
     # Extract the integer prefix that denotes the string's length
-    <<string::bytes-size(size), rest::bytes>> = tail
+    <<string::bytes-size(size), rest::bytes>> = rest
 
     {string, rest}
   end
 
-  defp decode_string(<<head::utf8, tail::bytes>>, acc) do
-    decode_string(tail, [head | acc])
+  defp decode_string(<<head::utf8, rest::bytes>>, acc) do
+    decode_string(rest, [head | acc])
   end
 
-  defp decode_list(<<?e::utf8, tail::bytes>>, acc) do
-    {Enum.reverse(acc), tail}
+  defp decode_list(<<?e::utf8, rest::bytes>>, acc) do
+    {Enum.reverse(acc), rest}
   end
 
   defp decode_list(binary, acc) do
@@ -100,8 +100,8 @@ defmodule Trex.Bencode do
     decode_list(val_rest, [val | acc])
   end
 
-  defp decode_dictionary(<<?e::utf8, tail::bytes>>, acc) do
-    {acc, tail}
+  defp decode_dictionary(<<?e::utf8, rest::bytes>>, acc) do
+    {acc, rest}
   end
 
   defp decode_dictionary(binary, acc) do
