@@ -61,11 +61,22 @@ defmodule Trex.Bencode do
   defp parse(<<?d::utf8, tail::bytes>>), do: parse_dictionary(tail, %{})
   defp parse(binary),                    do: parse_string(binary, [])
 
-  defp parse_integer(<<?e::utf8, tail::bytes>>, acc),   do: {List.to_integer(acc), tail}
-  defp parse_integer(<<head::utf8, tail::bytes>>, acc), do: parse_integer(tail, acc ++ List.wrap(head))
+  defp parse_integer(<<?e::utf8, tail::bytes>>, acc) do
+    acc =
+      acc
+      |> Enum.reverse
+      |> List.to_integer
+    {acc, tail}
+  end
+  defp parse_integer(<<head::utf8, tail::bytes>>, acc) do
+    parse_integer(tail, [head | acc])
+  end
 
   defp parse_string(<<?:::utf8, tail::bytes>>, acc) do
-    length = List.to_integer(acc)
+    length =
+      acc
+      |> Enum.reverse
+      |> List.to_integer
 
     # Extract the integer prefix that denotes the string's length
     <<string::bytes-size(length), rest::bytes>> = tail
@@ -74,18 +85,18 @@ defmodule Trex.Bencode do
   end
 
   defp parse_string(<<head::utf8, tail::bytes>>, acc) do
-    parse_string(tail, acc ++ List.wrap(head))
+    parse_string(tail, [head | acc])
   end
 
   defp parse_list(<<?e::utf8, tail::bytes>>, acc) do
-    {acc, tail}
+    {Enum.reverse(acc), tail}
   end
 
   defp parse_list(binary, acc) do
     # Recursively decode each item in the list
     {val, val_rest} = parse(binary)
 
-    parse_list(val_rest, acc ++ [val])
+    parse_list(val_rest, [val | acc])
   end
 
   defp parse_dictionary(<<?e::utf8, tail::bytes>>, acc) do
@@ -123,17 +134,16 @@ defmodule Trex.Bencode do
   end
 
   defp unparse(dictionary) when is_map(dictionary) do
-    # Recursively encode each key and value and sort by key. Then, reduce the
+    # Sort by key and recursively encode each key and value. Then, reduce the
     # dictionary into a string.
-    encoded_dictionary =
+    dictionary =
       dictionary
       |> Enum.sort
       |> Enum.map(fn {k, v} ->
-        (k |> unparse |> List.wrap) ++ (v |> unparse |> List.wrap)
+        unparse(k) <> unparse(v)
       end)
-      |> List.flatten
-      |> List.foldr("", fn x, acc -> to_string(x) <> to_string(acc) end)
+      |> Enum.reduce("", fn x, acc -> acc <> x end)
 
-    "d" <> encoded_dictionary <> "e"
+    "d" <> dictionary <> "e"
   end
 end
