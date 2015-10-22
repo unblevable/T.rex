@@ -5,7 +5,7 @@ defmodule Trex.Swarm do
 
   require Logger
 
-  alias Trex.Peer.Messages
+  alias Trex.Protocol
 
   @timeout 2_000
   @port 6881
@@ -14,7 +14,7 @@ defmodule Trex.Swarm do
     peers = parse_peers_binary(peers)
 
     # create handshake message
-    Messages.encode(:handshake, <<0::size(64)>>, info_hash, peer_id)
+    Protocol.encode(:handshake, <<0::size(64)>>, info_hash, peer_id)
     |> handshake(peers)
   end
 
@@ -31,7 +31,7 @@ defmodule Trex.Swarm do
         :gen_tcp.send(socket, message)
         receive do
           {:tcp, _socket, data} ->
-            Messages.decode(data)
+            Protocol.decode(data)
             Logger.debug("Handshake succeeded.")
           {:tcp_closed, _socket} ->
             Logger.debug("Socket is closed.")

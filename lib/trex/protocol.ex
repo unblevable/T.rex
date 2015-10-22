@@ -1,4 +1,4 @@
-defmodule Trex.Peer.Messages do
+defmodule Trex.Protocol do
   @moduledoc """
   Peer protocol message decoder and encoder.
   """
