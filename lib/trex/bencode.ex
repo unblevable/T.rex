@@ -27,38 +27,13 @@ defmodule Trex.Bencode do
   def decode(binary) do
     binary
     |> decode_type
-    # Extract the decoded binary from the accumulator
+    # Separate the decoded binary from the accumulator
     |> elem(0)
-  end
-
-  @doc """
-  Encode Elixir data types into corresponding bencode types.
-
-  ## Examples
-
-      iex> Trex.Bencode.encode("spam")
-      "4:spam"
-
-      iex> Trex.Bencode.encode(3)
-      "i3e"
-
-      iex> Trex.Bencode.encode(["spam", "eggs"])
-      "l4:spam4:eggse"
-
-      iex> Trex.Bencode.encode(%{"cow" => "moo", "spam" => "eggs"})
-      "d3:cow3:moo4:spam4:eggse"
-
-      iex> Trex.Bencode.encode(%{spam: ["a", "b"]})
-      "d4:spaml1:a1:bee"
-
-  """
-  def encode(data) do
-    encode_type(data)
   end
 
   defp decode_type(<<?i::utf8, rest::bytes>>), do: decode_integer(rest, [])
   defp decode_type(<<?l::utf8, rest::bytes>>), do: decode_list(rest, [])
-  defp decode_type(<<?d::utf8, rest::bytes>>), do: decode_dictionary(rest, %{})
+  defp decode_type(<<?d::utf8, rest::bytes>>), do: decode_dict(rest, %{})
   defp decode_type(binary),                    do: decode_string(binary, [])
 
   defp decode_integer(<<?e::utf8, rest::bytes>>, acc) do
@@ -100,11 +75,11 @@ defmodule Trex.Bencode do
     decode_list(val_rest, [val | acc])
   end
 
-  defp decode_dictionary(<<?e::utf8, rest::bytes>>, acc) do
+  defp decode_dict(<<?e::utf8, rest::bytes>>, acc) do
     {acc, rest}
   end
 
-  defp decode_dictionary(binary, acc) do
+  defp decode_dict(binary, acc) do
     # The key must be a string.
     {key, key_rest} = decode_string(binary, [])
 
@@ -114,7 +89,32 @@ defmodule Trex.Bencode do
     # Decode the key as an atom for convenience
     rest = Map.put(acc, String.to_atom(key), val)
 
-    decode_dictionary(val_rest, rest)
+    decode_dict(val_rest, rest)
+  end
+
+  @doc """
+  Encode Elixir data types into corresponding bencode types.
+
+  ## Examples
+
+      iex> Trex.Bencode.encode("spam")
+      "4:spam"
+
+      iex> Trex.Bencode.encode(3)
+      "i3e"
+
+      iex> Trex.Bencode.encode(["spam", "eggs"])
+      "l4:spam4:eggse"
+
+      iex> Trex.Bencode.encode(%{"cow" => "moo", "spam" => "eggs"})
+      "d3:cow3:moo4:spam4:eggse"
+
+      iex> Trex.Bencode.encode(%{spam: ["a", "b"]})
+      "d4:spaml1:a1:bee"
+
+  """
+  def encode(data) do
+    encode_type(data)
   end
 
   defp encode_type(integer) when is_integer(integer) do
@@ -134,15 +134,15 @@ defmodule Trex.Bencode do
     "l" <> (list |> Enum.map(&encode_type/1) |> List.to_string) <> "e"
   end
 
-  defp encode_type(dictionary) when is_map(dictionary) do
+  defp encode_type(dict) when is_map(dict) do
     # Sort by key and recursively encode each key and value. Then, reduce the
     # dictionary into a string.
-    dictionary =
-      dictionary
+    dict =
+      dict
       |> Enum.sort
       |> Enum.map(fn {k, v} -> encode_type(k) <> encode_type(v) end)
       |> Enum.reduce("", fn x, acc -> acc <> x end)
 
-    "d" <> dictionary <> "e"
+    "d" <> dict <> "e"
   end
 end

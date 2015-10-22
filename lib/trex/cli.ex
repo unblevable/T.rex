@@ -4,7 +4,7 @@ defmodule Trex.Cli do
   """
 
   alias Trex.Tracker
-  alias Trex.Peer
+  alias Trex.Swarm
 
   @doc """
   usage: trex <file> [options]
@@ -92,9 +92,10 @@ defmodule Trex.Cli do
         :file.format(error)
         # System.halt(1)
       {:ok, binary} ->
+        # TODO: refactor from a single flow of data transforms
         binary
         |> Tracker.request
-        |> Peer.connect
+        |> Swarm.connect
     end
   end
 end

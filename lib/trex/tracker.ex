@@ -1,6 +1,6 @@
 defmodule Trex.Tracker do
   @moduledoc"""
-  Tracker requests/responses.
+  Make a request to a tracker and handle its responses.
   """
 
   alias Trex.Bencode
@@ -24,11 +24,18 @@ defmodule Trex.Tracker do
       |> Bencode.decode
       |> get_request_params
 
-    Peer.start_link({request_params[:peer_id], request_params[:info_hash]})
+    %{
+      info_hash: info_hash,
+      peer_id: peer_id
+    } = request_params
 
-    announce <> "?" <> URI.encode_query(request_params)
-    |> send_request
-    |> Bencode.decode
+    peers =
+      announce <> "?" <> URI.encode_query(request_params)
+      |> send_request
+      |> Bencode.decode
+      |> handle_response
+
+    {peers, info_hash, peer_id}
   end
 
   defp get_request_params(metainfo) do
@@ -37,9 +44,9 @@ defmodule Trex.Tracker do
     %{
       announce: announce,
       info: info = %{
-        "piece length": piece_length,
-        pieces: pieces,
-        name: name,
+        "piece length": _piece_length,
+        pieces: _pieces,
+        name: _name,
         length: length
       }
     } = metainfo
@@ -95,5 +102,16 @@ defmodule Trex.Tracker do
         IO.inspect reason
         # System.halt(1)
     end
+  end
+
+  defp handle_response(response) do
+    %{
+      interval: _interval,
+      # "tracker id": tracker_id,
+      # complete: seeders,
+      # incomplete: leechers,
+      peers: peers_binary
+    } = response
+    peers_binary
   end
 end
