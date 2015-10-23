@@ -3,9 +3,8 @@ defmodule Trex.Swarm do
   Manage peer connections.
   """
 
-  require Logger
-
   alias Trex.Protocol
+  require Logger
 
   @timeout 2_000
   @port 6881
