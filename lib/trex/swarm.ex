@@ -64,11 +64,15 @@ defmodule Trex.Swarm do
   #
   # Each of the first 4 bytes hold an octet of the peer's ip address. The last
   # 2 bytes hold the peer's port number.
-  defp parse_peers_binary(binary), do: parse_peers_binary(binary, [])
-  defp parse_peers_binary(<<
-    a, b, c, d,
-    port::integer-size(16),
-    rest::bytes
-  >>, acc),                        do: parse_peers_binary(rest, [{{a, b, c, d}, port} | acc])
-  defp parse_peers_binary(_, acc), do: acc
+  defp parse_peers_binary(binary) do
+    parse_peers_binary(binary, [])
+  end
+
+  defp parse_peers_binary(<<a, b, c, d, port::size(16), rest::bytes>>, acc) do
+    parse_peers_binary(rest, [{{a, b, c, d}, port} | acc])
+  end
+
+  defp parse_peers_binary(_, acc) do
+    acc
+  end
 end
