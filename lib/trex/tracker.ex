@@ -5,6 +5,7 @@ defmodule Trex.Tracker do
 
   alias Trex.Bencode
   alias Trex.Peer
+  require Logger
 
   @version Mix.Project.config[:version]
   @client_id "RX"
@@ -96,7 +97,7 @@ defmodule Trex.Tracker do
       {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         body
       {:ok, %HTTPoison.Response{status_code: 404}} ->
-        IO.puts "404"
+        Logger.info 404
         # System.halt(1)
       {:error, %HTTPoison.Error{reason: reason}} ->
         IO.inspect reason

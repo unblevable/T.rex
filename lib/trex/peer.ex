@@ -29,24 +29,45 @@ defmodule Trex.Peer do
 
   require Logger
 
-  # Client API ---------------------------------------------------------------
+  # Client -------------------------------------------------------------------
 
-  def start_link(peer_socket, peer_id) do
-    :gen_fsm.start_link(__MODULE__, [peer_socket], name: peer_id)
+  # TODO: correctly pass in peer id
+  def start_link(peer_socket, opts \\ []) do
+    :gen_fsm.start_link(__MODULE__, [peer_socket], opts)
   end
 
-  # Server callbacks ---------------------------------------------------------
+  ## Events ==================================================================
+
+  def me_choke() do
+    :gen_fsm.send_event(__MODULE__, :me_choke)
+  end
+
+  def me_interest() do
+    :gen_fsm.send_event(__MODULE__, :me_interest)
+  end
+
+  def it_choke() do
+    :gen_fsm.send_event(__MODULE__, :it_choke)
+  end
+
+  def it_interest() do
+    :gen_fsm.send_event(__MODULE__, :it_interest)
+  end
+
+  # Server -------------------------------------------------------------------
 
   def init(peer) do
     {:ok, :we_choke, peer}
   end
 
-  ## Events ------------------------------------------------------------------
+  ## States ==================================================================
 
   @doc """
   This client is choking the given peer and vice-versa.
   """
   def we_choke(:me_interest, state) do
+    # NOTE: (Temporary) Client immediately changes from choking to interested
+    # state.
     {:next_state, :me_interest_it_choke, state}
   end
 
@@ -63,7 +84,9 @@ defmodule Trex.Peer do
 
   def we_interest(:it_choke, state) do
     {:next_state, :me_interest_it_choke, state}
+  end
 
+  def we_interest(:have, state) do
   end
 
   @doc """
@@ -90,7 +113,7 @@ defmodule Trex.Peer do
     {:next_state, :we_interest, state}
   end
 
-  ## Placeholder =============================================================
+  ## Callbacks ===============================================================
 
   @doc false
   def terminate(_reason, _state, _data) do
@@ -102,7 +125,9 @@ defmodule Trex.Peer do
     {:ok, state, data}
   end
 
-  ## Helper ==================================================================
+  # Helpers ------------------------------------------------------------------
+
   defp loop do
+
   end
 end

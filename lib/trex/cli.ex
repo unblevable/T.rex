@@ -3,8 +3,29 @@ defmodule Trex.Cli do
   CLI parser
   """
 
+  use GenEvent
+
   alias Trex.Tracker
   alias Trex.Swarm
+
+  # TODO: necessary or optional?
+  def start_link(event_manager) do
+    case GenEvent.add_handler(event_manager, __MODULE__, []) do
+      :ok = ok ->
+        ok
+      {:error, reason} = error ->
+        error
+    end
+  end
+
+  def handle_event({:add_torrent, torrent}, torrents) do
+    process(torrent)
+    {:ok, [torrent | torrents]}
+  end
+
+  def handle_call(:list, torrents) do
+    {:ok, Enum.reverse(torrents), []}
+  end
 
   @doc """
   usage: trex <file> [options]
@@ -17,6 +38,7 @@ defmodule Trex.Cli do
     argv
     |>  parse
     |>  process
+
   end
 
   defp parse(argv) do

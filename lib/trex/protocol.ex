@@ -32,15 +32,6 @@ defmodule Trex.Protocol do
     decode_type(binary, [])
   end
 
-  # Think.
-  # Break a message into message and rest.
-  # Then messages and rest.
-  # Then messages and rest.
-
-  # defp decode(_, acc) do
-  #   acc
-  # end
-
   defp decode_type(<<
     @protocol_string_len,
     "BitTorrent protocol",
@@ -96,12 +87,6 @@ defmodule Trex.Protocol do
     decode_type(rest, [%{type: :have, piece_index: piece_index} | acc])
   end
 
-  defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) do
-    # length = String.to_integer(length)
-    <<bitfield::bytes-size(length), rest::bytes>> = rest
-    decode_type(rest, [%{type: :bitfield, bitfield: bitfield} | acc])
-  end
-
   # TODO: DRY
   defp decode_type(<<
     @request_len::size(32),
@@ -152,7 +137,15 @@ defmodule Trex.Protocol do
   end
 
   defp decode_type(binary, acc) do
+    IO.inspect acc
     {Enum.reverse(acc), binary}
+  end
+
+  # This needs to be defined last.
+  defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) do
+    # length = String.to_integer(length)
+    <<bitfield::bytes-size(length), rest::bytes>> = rest
+    decode_type(rest, [%{type: :bitfield, bitfield: bitfield} | acc])
   end
 
   @doc """
