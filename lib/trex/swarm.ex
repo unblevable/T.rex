@@ -9,23 +9,39 @@ defmodule Trex.Swarm do
   alias Trex.Protocol
   require Logger
 
+  # TODO: add to config?
   @num_peers 10
   @port 6881
   @timeout 2_000
 
   # TODO: retain state after crash?
-  def start_link([name: _name]) do
-    Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  def start_link do
+    case Supervisor.start_link(__MODULE__, [], name: __MODULE__) do
+      {:ok, _} = ok ->
+        ok
+      {:error, reason} = error ->
+        error
+    end
   end
 
-  # def start_peer do
-  #   Supervisor.start_child(__MODULE__, [])
-  # end
+  def spawn_peer(peer) do
+    Supervisor.start_child(Trex.Swarm, [peer])
+  end
 
-  def init(:ok) do
-    Logger.info "starting link"
+  # TODO: pass in handshake and id
+  def init(_) do
+    handshake_msg = "handshake"
+    # handshake_msg =
+    #   Protocol.encode(:handshake, <<0::size(64)>>, info_hash, peer_id)
+
+    # TODO: handle error
+    {:ok, lsocket} =
+      :gen_tcp.listen(@port, [:binary, active: 1])
+
     children = [
-      worker(Trex.Peer, [], restart: :temporary)
+      # worker(Trex.Peer, [])
+      # Pass the listen socket to each peer.
+      worker(Trex.Server, [lsocket, handshake_msg, peer, protocol])
     ]
 
     supervise(children, strategy: :simple_one_for_one)
@@ -38,71 +54,53 @@ defmodule Trex.Swarm do
     peers
     |> parse_peers_binary
     |> Enum.take_random(@num_peers)
-
-    # |> randomly pick 20 and spawn new process for each
-    # |> Enum.map(handshake(message))
-
-    # Map peers to a handshake
-    # peer
-    # |> handshake
-    # |> connect or redo handshake
-    # |> p2p loop or redo loop or redo handshake
-    # |>
-
-    # create handshake message
-    # Protocol.encode(:handshake, <<0::size(64)>>, info_hash, peer_id)
-    # |> handshake(peers)
+    |> Enum.map(&(spawn_peer(&1)))
+    # |> Enum.map(&handshake(&1, message))
   end
 
-  def handshake(message, [{ip, port} | peers]) do
-    # TODO: debug only
-    dotted_ip =
-      ip
-      |> Tuple.to_list
-      |> Enum.join(".")
-
+  def handshake({ip, port}, message) do
     case :gen_tcp.connect(ip, port, [:binary, active: false], @timeout) do
       {:ok, socket} ->
-        Logger.debug("#{dotted_ip}:#{port} connected.")
+        Logger.debug("#{to_dotted_ip(ip)}:#{port} connected.")
         :inet.setopts(socket, [active: true])
         :gen_tcp.send(socket, message)
         receive do
           {:tcp, socket, data} ->
             Logger.debug("Handshake succeeded.")
-
-            # Enter peer loop and process messages list.
-            # Handle peer swarm here as well.
-            # But for now, handle just one peer connection.
-            # {:ok, peer} = Peer.start_link(socket)
-
-            # Wait for bitfield message here?
-            # receive do
-            # after
-            #   3_000
-            # end
-            # loop(socket, data)
-
-          {:tcp_closed, _socket} ->
-            Logger.debug("Socket is closed.")
-            handshake(message, peers)
-          {:tcp_error, reason} ->
-            Logger.debug("TCP error")
-            Logger.debug(reason)
-            handshake(message, peers)
-          after
-            @timeout ->
-              Logger.debug("Socket timed out.")
-              handshake(message, peers)
+    #
+    #         # Enter peer loop and process messages list.
+    #         # Handle peer swarm here as well.
+    #         # But for now, handle just one peer connection.
+    #         # {:ok, peer} = Peer.start_link(socket)
+    #
+    #         # Wait for bitfield message here?
+    #         # receive do
+    #         # after
+    #         #   3_000
+    #         # end
+    #         # loop(socket, data)
+    #
+    #       {:tcp_closed, _socket} ->
+    #         Logger.debug("Socket is closed.")
+    #         handshake(message, peers)
+    #       {:tcp_error, reason} ->
+    #         Logger.debug("TCP error")
+    #         Logger.debug(reason)
+    #         handshake(message, peers)
+    #       after
+    #         @timeout ->
+    #           Logger.debug("Socket timed out.")
+    #           handshake(message, peers)
         end
-      {:error, :timeout} ->
-        Logger.debug("#{dotted_ip}:#{port} timed out.")
-        handshake(message, peers)
-      {:error, :econnrefused} ->
-        Logger.debug("#{dotted_ip}:#{port} refused to connect")
-        handshake(message, peers)
-      {:error, reason} ->
-        Logger.debug(reason)
-        handshake(message, peers)
+    #   {:error, :timeout} ->
+    #     Logger.debug("#{dotted_ip}:#{port} timed out.")
+    #     handshake(message, peers)
+    #   {:error, :econnrefused} ->
+    #     Logger.debug("#{dotted_ip}:#{port} refused to connect")
+    #     handshake(message, peers)
+    #   {:error, reason} ->
+    #     Logger.debug(reason)
+    #     handshake(message, peers)
     end
   end
 
@@ -181,4 +179,10 @@ defmodule Trex.Swarm do
   #
   # defp loop_through_messages(_, acc) do
   # end
+
+  defp to_dotted_ip(ip) do
+    ip
+    |> Tuple.to_list
+    |> Enum.join(".")
+  end
 end
