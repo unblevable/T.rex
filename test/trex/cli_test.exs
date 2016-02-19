@@ -7,9 +7,9 @@ defmodule CliTest do
 
   test "passing no arguments outputs usage info" do
     assert capture_io(fn ->
-      Cli.run([])
+      Cli.main([])
     end) == capture_io(fn ->
-      Cli.run(["--help"])
+      Cli.main(["--help"])
     end)
   end
 end
