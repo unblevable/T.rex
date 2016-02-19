@@ -136,11 +136,6 @@ defmodule Trex.Protocol do
     } | acc])
   end
 
-  defp decode_type(binary, acc) do
-    IO.inspect acc
-    {Enum.reverse(acc), binary}
-  end
-
   # This needs to be defined last.
   defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) do
     # length = String.to_integer(length)
@@ -148,21 +143,17 @@ defmodule Trex.Protocol do
     decode_type(rest, [%{type: :bitfield, bitfield: bitfield} | acc])
   end
 
+  defp decode_type(binary, acc) do
+    IO.inspect acc
+    {Enum.reverse(acc), binary}
+  end
+
+
   @doc """
   Encode a given type and associated data into a peer protocol binary.
 
   ## Examples
   """
-  def encode(:handshake, reserved, info_hash, peer_id) do
-    <<
-      @protocol_string_len,
-      "BitTorrent protocol",
-      reserved::bytes-size(8),
-      info_hash::bytes-size(20),
-      peer_id::bytes-size(20)
-    >>
-  end
-
   def encode(:keep_alive) do
     <<@keep_alive_len::size(32)>>
   end
@@ -190,6 +181,16 @@ defmodule Trex.Protocol do
   def encode(:bitfield, bitfield) do
     message = <<@bitfield_id>> <> bitfield
     <<byte_size(message)::size(32)>> <> message
+  end
+
+  def encode(:handshake, reserved, info_hash, peer_id) do
+    <<
+      @protocol_string_len,
+      "BitTorrent protocol",
+      reserved::bytes-size(8),
+      info_hash::bytes-size(20),
+      peer_id::bytes-size(20)
+    >>
   end
 
   def encode(

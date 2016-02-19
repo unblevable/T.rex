@@ -87,6 +87,7 @@ defmodule Trex.Peer do
   end
 
   def we_interest(:have, state) do
+    {:next_state, :we_interest, state}
   end
 
   @doc """
@@ -121,7 +122,7 @@ defmodule Trex.Peer do
   end
 
   @doc false
-  def handle_sync_event(event, from, state_name, state_data) do
+  def handle_sync_event(event, _from, state_name, state_data) do
     {:stop, {:bad_sync_event, state_name, event}, state_data}
   end
 

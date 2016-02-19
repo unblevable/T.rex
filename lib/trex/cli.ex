@@ -5,12 +5,7 @@ defmodule Trex.Cli do
 
   use GenServer
 
-  alias Trex.Tracker
-  alias Trex.Swarm
-
-  def start_link(event_manager_name) do
-    GenServer.start_link(__MODULE__, event_manager_name)
-  end
+  alias Trex.Spring
 
   @doc """
   usage: trex <file> [options]
@@ -19,12 +14,22 @@ defmodule Trex.Cli do
 
   -h, --help        output usage info
   """
-  def run(argv) do
+  def main(argv) do
     argv
     |>  parse
     |>  process
-
   end
+
+  # Client -------------------------------------------------------------------
+
+  @doc false
+  def start_link do
+    GenServer.start_link(__MODULE__, nil)
+  end
+
+  # Server -------------------------------------------------------------------
+
+  # Helpers ------------------------------------------------------------------
 
   defp parse(argv) do
     options =
@@ -89,20 +94,9 @@ defmodule Trex.Cli do
 
   # TODO: urls and magnets
   defp process(uri) do
-    file =
-      uri
-      |> Path.relative_to_cwd
-      |> File.read
-
-    case file do
-      {:error, error} ->
-        :file.format(error)
-        # System.halt(1)
-      {:ok, binary} ->
-        # TODO: refactor from a single flow of data transforms
-        binary
-        |> Tracker.request
-        |> Swarm.connect
-    end
+    uri
+    |> Path.relative_to_cwd
+    |> File.read!
+    |> Spring.start_torrent
   end
 end

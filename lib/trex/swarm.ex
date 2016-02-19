@@ -1,61 +1,29 @@
 defmodule Trex.Swarm do
   @moduledoc """
-  Manage peer connections.
+  Supervise peer connections.
   """
 
   use Supervisor
 
-  alias Trex.Peer
-  alias Trex.Protocol
   require Logger
 
-  # TODO: add to config?
-  @num_peers 10
-  @port 6881
   @timeout 2_000
 
-  # TODO: retain state after crash?
   def start_link do
-    case Supervisor.start_link(__MODULE__, [], name: __MODULE__) do
-      {:ok, _} = ok ->
-        ok
-      {:error, reason} = error ->
-        error
-    end
+    Supervisor.start_link(__MODULE__, nil)
   end
 
-  def spawn_peer(peer) do
-    Supervisor.start_child(Trex.Swarm, [peer])
+  def start_peer(supervisor, ip, port, lsocket, handshake_msg) do
+    Supervisor.start_child(supervisor, [ip, port, lsocket, handshake_msg])
   end
 
-  # TODO: pass in handshake and id
   def init(_) do
-    handshake_msg = "handshake"
-    # handshake_msg =
-    #   Protocol.encode(:handshake, <<0::size(64)>>, info_hash, peer_id)
-
-    # TODO: handle error
-    {:ok, lsocket} =
-      :gen_tcp.listen(@port, [:binary, active: 1])
-
     children = [
       # worker(Trex.Peer, [])
-      # Pass the listen socket to each peer.
-      worker(Trex.Server, [lsocket, handshake_msg, peer, protocol])
+      worker(Trex.Server, [])
     ]
 
     supervise(children, strategy: :simple_one_for_one)
-  end
-
-  def connect({peers, info_hash, peer_id}) when is_binary(peers) do
-    message =
-      Protocol.encode(:handshake, <<0::size(64)>>, info_hash, peer_id)
-
-    peers
-    |> parse_peers_binary
-    |> Enum.take_random(@num_peers)
-    |> Enum.map(&(spawn_peer(&1)))
-    # |> Enum.map(&handshake(&1, message))
   end
 
   def handshake({ip, port}, message) do
@@ -65,7 +33,7 @@ defmodule Trex.Swarm do
         :inet.setopts(socket, [active: true])
         :gen_tcp.send(socket, message)
         receive do
-          {:tcp, socket, data} ->
+          {:tcp, _socket, _data} ->
             Logger.debug("Handshake succeeded.")
     #
     #         # Enter peer loop and process messages list.
@@ -109,20 +77,10 @@ defmodule Trex.Swarm do
     Logger.debug("Peer list exhausted.")
   end
 
-  # The binary contains a series of 6 bytes per peer.
-  #
-  # Each of the first 4 bytes hold an octet of the peer's ip address. The last
-  # 2 bytes hold the peer's port number.
-  defp parse_peers_binary(binary) do
-    parse_peers_binary(binary, [])
-  end
-
-  defp parse_peers_binary(<<a, b, c, d, port::size(16), rest::bytes>>, acc) do
-    parse_peers_binary(rest, [{{a, b, c, d}, port} | acc])
-  end
-
-  defp parse_peers_binary(_, acc) do
-    acc
+  defp to_dotted_ip(ip) do
+    ip
+    |> Tuple.to_list
+    |> Enum.join(".")
   end
 
   # TODO: manage multiple socket connections
@@ -179,10 +137,4 @@ defmodule Trex.Swarm do
   #
   # defp loop_through_messages(_, acc) do
   # end
-
-  defp to_dotted_ip(ip) do
-    ip
-    |> Tuple.to_list
-    |> Enum.join(".")
-  end
 end
