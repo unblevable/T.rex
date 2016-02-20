@@ -92,14 +92,23 @@ defmodule Trex.Torrent do
     handshake_msg =
       Protocol.encode(:handshake, <<0::size(64)>>, info_hash, client_id)
 
+    # NOTE: use proc_lib?
+    # Call spawn_link() to prevent a deadlock in init(), since each peer will
+    # block to wait for messages.
+    spawn_link(fn ->
+      start_peers(swarm, lsocket, peers_binary, handshake_msg)
+    end)
+
+    swarm
+  end
+
+  defp start_peers(swarm, lsocket, peers_binary, handshake_msg) do
     peers_binary
     |> parse_peers_binary
     |> Enum.take_random(Application.get_env(:trex, :num_peers))
     |> Enum.map(fn {ip, port} ->
       Swarm.start_peer(swarm, ip, port, lsocket, handshake_msg)
     end)
-
-    swarm
   end
 
   # The binary contains a series of 6 bytes per peer.

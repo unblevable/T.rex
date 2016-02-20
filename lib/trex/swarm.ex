@@ -5,10 +5,6 @@ defmodule Trex.Swarm do
 
   use Supervisor
 
-  require Logger
-
-  @timeout 2_000
-
   def start_link do
     Supervisor.start_link(__MODULE__, nil)
   end
@@ -26,64 +22,6 @@ defmodule Trex.Swarm do
     supervise(children, strategy: :simple_one_for_one)
   end
 
-  def handshake({ip, port}, message) do
-    case :gen_tcp.connect(ip, port, [:binary, active: false], @timeout) do
-      {:ok, socket} ->
-        Logger.debug("#{to_dotted_ip(ip)}:#{port} connected.")
-        :inet.setopts(socket, [active: true])
-        :gen_tcp.send(socket, message)
-        receive do
-          {:tcp, _socket, _data} ->
-            Logger.debug("Handshake succeeded.")
-    #
-    #         # Enter peer loop and process messages list.
-    #         # Handle peer swarm here as well.
-    #         # But for now, handle just one peer connection.
-    #         # {:ok, peer} = Peer.start_link(socket)
-    #
-    #         # Wait for bitfield message here?
-    #         # receive do
-    #         # after
-    #         #   3_000
-    #         # end
-    #         # loop(socket, data)
-    #
-    #       {:tcp_closed, _socket} ->
-    #         Logger.debug("Socket is closed.")
-    #         handshake(message, peers)
-    #       {:tcp_error, reason} ->
-    #         Logger.debug("TCP error")
-    #         Logger.debug(reason)
-    #         handshake(message, peers)
-    #       after
-    #         @timeout ->
-    #           Logger.debug("Socket timed out.")
-    #           handshake(message, peers)
-        end
-    #   {:error, :timeout} ->
-    #     Logger.debug("#{dotted_ip}:#{port} timed out.")
-    #     handshake(message, peers)
-    #   {:error, :econnrefused} ->
-    #     Logger.debug("#{dotted_ip}:#{port} refused to connect")
-    #     handshake(message, peers)
-    #   {:error, reason} ->
-    #     Logger.debug(reason)
-    #     handshake(message, peers)
-    end
-  end
-
-  def handshake(_message, []) do
-    # TODO: retry connecting after
-    Logger.debug("Peer list exhausted.")
-  end
-
-  defp to_dotted_ip(ip) do
-    ip
-    |> Tuple.to_list
-    |> Enum.join(".")
-  end
-
-  # TODO: manage multiple socket connections
   # defp loop(socket, data) do
   #   case Protocol.decode(data) do
   #     {[], _} ->
