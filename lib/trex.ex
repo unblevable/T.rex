@@ -10,11 +10,13 @@ defmodule Trex do
 
   @doc false
   def a do
-    Trex.Cli.main(["priv/ubuntu.torrent"])
+    {:ok, pid} = Trex.Cli.main(["priv/ubuntu.torrent"])
+    pid
   end
 
   @doc false
   def b do
-    Trex.Cli.main(["priv/flagfromserver.torrent"])
+    {:ok, pid} = Trex.Cli.main(["priv/flagfromserver.torrent"])
+    pid
   end
 end

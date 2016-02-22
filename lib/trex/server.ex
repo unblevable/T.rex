@@ -3,6 +3,7 @@ defmodule Trex.Server do
 
   use GenServer
 
+  alias Trex.Protocol
   require Logger
 
   @opts [:binary, active: 1]
@@ -16,7 +17,11 @@ defmodule Trex.Server do
       ip: ip,
       port: port,
       lsocket: lsocket,
-      handshake_msg: handshake_msg
+      handshake_msg: handshake_msg,
+      socket: nil,
+      # states: no_handshake, we_choke, we_interest, me_choke_it_interest,
+      # me_interest_it_choke
+      state: :no_handshake
     }
 
     GenServer.start_link(__MODULE__, state, [])
@@ -30,15 +35,23 @@ defmodule Trex.Server do
 
     handshake(socket, state.handshake_msg)
 
-    {:ok, Map.put(state, :socket, socket)}
+    {:ok, %{state | socket: socket}}
   end
 
   ## TCP =====================================================================
 
-  def handle_info({:tcp, _socket, _data}, state) do
+  # TODO: handle timeouts
+  def handle_info({:tcp, _socket, data}, %{state: :no_handshake} = state) do
     Logger.debug("Handshake succeeded.")
 
-    {:noreply, state}
+    {:noreply, %{state | state: :we_choke}}
+  end
+
+  def handle_info({:tcp, _socket, data}, state) do
+    Logger.debug("We choke.")
+    IO.inspect(Protocol.decode(data))
+
+    {:noreply, %{state | state: :we_choke}}
   end
 
   # TODO: add in a timeout
@@ -58,6 +71,7 @@ defmodule Trex.Server do
   def handle_info({:tcp_passive, socket}, state) do
     Logger.debug("The socket is in passive mode.")
     :inet.setopts(socket, [active: 1])
+    Logger.debug("The socket is in active mode.")
 
     {:noreply, state}
   end
@@ -65,6 +79,7 @@ defmodule Trex.Server do
   # TODO: add in a timeout
   def handle_info({:tcp_closed, _socket}, state) do
     Logger.debug("The socket is closed.")
+
     # Try another peer.
 
     {:noreply, state}
@@ -73,6 +88,7 @@ defmodule Trex.Server do
 
   def handle_info({:tcp_error, reason}, state) do
     Logger.debug("A TCP error has occurred: #{reason}")
+
     # Try another peer.
 
     {:noreply, state}

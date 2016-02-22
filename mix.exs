@@ -30,7 +30,7 @@ defmodule Trex.Mixfile do
         port: @port,
 
         # initial number of peers to connect to
-        num_peers: 2
+        num_peers: 1
       ],
       mod: {Trex, []}
     ]

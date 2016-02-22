@@ -3,6 +3,8 @@ defmodule Trex.Protocol do
   Peer protocol message decoder and encoder.
   """
 
+  require Logger
+
   @block_length 16384 # 2^(14)
 
   @protocol_string_len 19
@@ -87,6 +89,15 @@ defmodule Trex.Protocol do
     decode_type(rest, [%{type: :have, piece_index: piece_index} | acc])
   end
 
+  # NOTE: A bitfield of the wrong length is considered an error.
+  defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) do
+    # Subtract the id length.
+    length = length - 1
+
+    <<bitfield::bytes-size(length), rest::bytes>> = rest
+    decode_type(rest, [%{type: :bitfield, bitfield: bitfield} | acc])
+  end
+
   # TODO: DRY
   defp decode_type(<<
     @request_len::size(32),
@@ -136,16 +147,9 @@ defmodule Trex.Protocol do
     } | acc])
   end
 
-  # This needs to be defined last.
-  defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) do
-    # length = String.to_integer(length)
-    <<bitfield::bytes-size(length), rest::bytes>> = rest
-    decode_type(rest, [%{type: :bitfield, bitfield: bitfield} | acc])
-  end
-
-  defp decode_type(binary, acc) do
-    IO.inspect acc
-    {Enum.reverse(acc), binary}
+  # Return the list of messages and any remaining bytes.
+  defp decode_type(rest, acc) do
+    {Enum.reverse(acc), rest}
   end
 
 

@@ -19,16 +19,7 @@ defmodule Trex.Torrent do
     GenServer.start_link(__MODULE__, [lsocket, binary], timeout: @timeout)
   end
 
-  @doc false
-  def format_status(_reason, [_pdict, state]) do
-    [data: [{'State', IO.inspect state}]]
-  end
-
   # Server -------------------------------------------------------------------
-
-  def handle_call(:state, from, state) do
-    {:reply, state, state}
-  end
 
   def init([lsocket, binary]) do
     # TODO: optional keys
