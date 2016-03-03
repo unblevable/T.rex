@@ -9,8 +9,8 @@ defmodule Trex.Swarm do
     Supervisor.start_link(__MODULE__, nil)
   end
 
-  def start_peer(supervisor, ip, port, lsocket, handshake_msg) do
-    Supervisor.start_child(supervisor, [ip, port, lsocket, handshake_msg])
+  def start_peer(supervisor, peer_state) do
+    Supervisor.start_child(supervisor, [peer_state])
   end
 
   def init(_) do

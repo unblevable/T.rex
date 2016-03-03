@@ -20,6 +20,7 @@ defmodule Trex.Spring do
     {:ok, lsocket} =
       :gen_tcp.listen(Application.get_env(:trex, :port), [:binary, active: 1])
 
+
     children = [
       worker(Trex.Torrent, [lsocket], restart: :transient, debug: [:trace])
     ]

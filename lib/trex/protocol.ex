@@ -5,7 +5,7 @@ defmodule Trex.Protocol do
 
   require Logger
 
-  @block_length 16384 # 2^(14)
+  @block_len 16384 # 2^(14)
 
   @protocol_string_len 19
   @keep_alive_len      0
@@ -90,11 +90,18 @@ defmodule Trex.Protocol do
   end
 
   # NOTE: A bitfield of the wrong length is considered an error.
-  defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) do
-    # Subtract the id length.
+  defp decode_type(<<length::size(32), @bitfield_id, rest::bytes>>, acc) when length - 1 == byte_size(rest) do
+    # Subtract the id's length.
     length = length - 1
 
+    if rest == "" do
+      Logger.debug("Length: #{length}")
+      Logger.debug("Rest: #{rest}")
+    end
+
+    # if length != byte_size(rest)
     <<bitfield::bytes-size(length), rest::bytes>> = rest
+
     decode_type(rest, [%{type: :bitfield, bitfield: bitfield} | acc])
   end
 
@@ -183,8 +190,8 @@ defmodule Trex.Protocol do
   end
 
   def encode(:bitfield, bitfield) do
-    message = <<@bitfield_id>> <> bitfield
-    <<byte_size(message)::size(32)>> <> message
+    msg = <<@bitfield_id>> <> bitfield
+    <<byte_size(msg)::size(32)>> <> msg
   end
 
   def encode(:handshake, reserved, info_hash, peer_id) do
@@ -201,7 +208,7 @@ defmodule Trex.Protocol do
     :request,
     piece_index,
     block_offset,
-    block_length
+    block_length \\ @block_len
   ) do
     <<
       @request_len::size(32),
@@ -213,9 +220,9 @@ defmodule Trex.Protocol do
   end
 
   def encode(:piece, piece_index, block_offset, piece) do
-    message = <<@piece_id, piece_index::size(32), block_offset::size(32)>>
+    msg = <<@piece_id, piece_index::size(32), block_offset::size(32)>>
       <> piece
-    <<byte_size(message)::size(32)>> <> message
+    <<byte_size(msg)::size(32)>> <> msg
   end
 
   def encode(

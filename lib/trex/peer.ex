@@ -33,25 +33,25 @@ defmodule Trex.Peer do
 
   # TODO: correctly pass in peer id
   def start_link(peer) do
-    :gen_fsm.start_link(__MODULE__, [peer], [])
+    :gen_fsm.start_link(__MODULE__, peer, [])
   end
 
   ## Events ==================================================================
 
-  def me_choke() do
-    :gen_fsm.send_event(__MODULE__, :me_choke)
+  def me_choke(pid) do
+    :gen_fsm.send_event(pid, :me_choke)
   end
 
-  def me_interest() do
-    :gen_fsm.send_event(__MODULE__, :me_interest)
+  def me_interest(pid) do
+    :gen_fsm.send_event(pid, :me_interest)
   end
 
-  def it_choke() do
-    :gen_fsm.send_event(__MODULE__, :it_choke)
+  def it_choke(pid) do
+    :gen_fsm.send_event(pid, :it_choke)
   end
 
-  def it_interest() do
-    :gen_fsm.send_event(__MODULE__, :it_interest)
+  def it_interest(pid) do
+    :gen_fsm.send_event(pid, :it_interest)
   end
 
   # Server -------------------------------------------------------------------
