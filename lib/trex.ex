@@ -9,8 +9,8 @@ defmodule Trex do
   end
 
   @doc false
-  def a do
-    {:ok, pid} = Trex.Cli.main(["priv/ubuntu.torrent"])
+  def a(torrent \\ "priv/ubuntu.torrent") do
+    {:ok, pid} = Trex.Cli.main([torrent])
     pid
   end
 
