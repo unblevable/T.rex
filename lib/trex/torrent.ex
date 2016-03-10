@@ -148,19 +148,8 @@ defmodule Trex.Torrent do
   ## Callbacks ===============================================================
 
   def handle_call(:get_next_piece_index, _from, state) do
-    # if the piece buffer is new
-    next_piece_index =
-      if state.piece_buffer == {} do
-      # select next rarest piece
-      0
-      else
-        state.next_piece_index
-      end
-
-    state =
-      %{state | next_piece_index: next_piece_index}
-
-    {:reply, next_piece_index, state}
+    IO.puts "Next piece index: #{state.next_piece_index}"
+    {:reply, state.next_piece_index, state}
   end
 
   # TODO
@@ -171,22 +160,27 @@ defmodule Trex.Torrent do
     {:reply, sub_piece_index, state}
   end
 
-  def handle_cast({:put_sub_piece, _piece_index, sub_piece_index, sub_piece}, state) do
+  def handle_cast({:put_sub_piece, piece_index, sub_piece_index, sub_piece}, state) do
+    IO.puts "num sub-pieces: #{state.num_sub_pieces}"
     piece_buffer =
       state.piece_buffer
 
     if sub_piece_index < state.num_sub_pieces do
-      Logger.debug "sub piece index: #{sub_piece_index}"
+      Logger.debug "Received sub piece #{sub_piece_index} for piece #{piece_index}."
       :ets.insert(piece_buffer, {sub_piece_index, sub_piece})
     else
+      IO.puts piece_index
+      IO.puts piece_index + 1
+      IO.puts "Piece buffer to save:"
       IO.inspect :ets.tab2list(piece_buffer)
+
       # clear the piece buffer
       :ets.delete_all_objects(piece_buffer)
 
       # move onto the next piece
       # TODO: use get_next_piece_index
       state =
-        %{state | next_piece_index: state.next_piece_index + 1}
+        %{state | next_piece_index: piece_index + 1}
     end
 
     {:noreply, state}

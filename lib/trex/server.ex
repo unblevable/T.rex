@@ -9,6 +9,8 @@ defmodule Trex.Server do
 
   @opts [:binary, active: 1]
   @timeout 2_000
+  @interested_interval 2_500
+  @keep_alive_interval 5_000
 
   # Client -------------------------------------------------------------------
 
@@ -20,6 +22,9 @@ defmodule Trex.Server do
   # Server -------------------------------------------------------------------
 
   def init(state) do
+    timer =
+      :erlang.start_timer(@interested_interval, self(), :send_message)
+
     socket =
       connect(state.ip, state.port)
 
@@ -27,12 +32,54 @@ defmodule Trex.Server do
 
     state =
       Map.merge(state, %{
+        next_sub_piece_index: 0,
         peer_state: :pre_handshake, # temporary
         socket: socket,             # TCP socket to send and receive messages
-        next_sub_piece_index: 0
+        timer: timer
       })
 
     {:ok, state}
+  end
+
+
+  def handle_info({:timeout, timer, :send_message}, state) do
+    :erlang.cancel_timer(timer)
+
+    socket =
+      state.socket
+
+    case state.peer_state do
+      :we_choke ->
+        msg =
+          Protocol.encode(:interested)
+        :gen_tcp.send(socket, msg)
+
+        timer =
+          :erlang.start_timer(@interested_interval, self(), :send_message)
+
+        Logger.debug "Sent interested."
+      :we_interest ->
+        :ok
+      :me_choke_it_interest ->
+        msg =
+          Protocol.encode(:keep_alive)
+        :gen_tcp.send(socket, msg)
+
+        timer =
+          :erlang.start_timer(@keep_alive_interval, self(), :send_message)
+
+        Logger.debug "Sent keep-alive."
+      :me_interest_it_choke ->
+        :ok
+      _ ->
+        timer =
+          :erlang.start_timer(@keep_alive_interval, self(), :send_message)
+    end
+
+    state =
+      %{state | timer: timer}
+
+    {:noreply, state}
   end
 
   ## TCP =====================================================================
@@ -44,37 +91,6 @@ defmodule Trex.Server do
     # Loop through the messages to determine the peer's next state.
     state =
       loop_messages(msgs, state)
-
-    Logger.debug(state.peer_state)
-
-    next_msg =
-      Protocol.encode(:keep_alive)
-
-    # TODO: cleanup
-    case state.peer_state do
-      :we_choke ->
-        next_msg =
-          Protocol.encode(:interested)
-      :me_choke_it_interest ->
-        next_piece_index =
-          Torrent.get_next_piece_index(state.torrent)
-
-        next_sub_piece_index =
-          state.next_sub_piece_index
-
-        # Logger.debug(next_sub_piece_index)
-
-        next_msg =
-          Protocol.encode(:request, next_piece_index, next_sub_piece_index)
-      # :me_interest_it_choke ->
-        # TODO
-      _ ->
-        IO.puts "Unknown state: #{state.peer_state}"
-        System.halt(0)
-    end
-
-    # IO.inspect "#{next_msg.type} message received."
-    :gen_tcp.send(socket, next_msg)
 
     {:noreply, state}
   end
@@ -135,52 +151,114 @@ defmodule Trex.Server do
   end
 
   defp loop_messages([msg | msgs], state) do
-    # unless msg.type == :keep_alive do
+    unless msg.type == :keep_alive do
       Logger.debug(msg.type)
-    # end
+    end
+
+    peer_state = state.peer_state
 
     case msg.type do
       :handshake ->
-        state = %{state |
-          peer_state: :we_choke
-        }
-      :keep_alive ->
-        :ok
-        # reset keep-alive timeout
+        if peer_state == :pre_handshake do
+          state =
+            %{state | peer_state: :we_choke}
+        end
+
+      # reset keep-alive timeout
+      # :keep_alive ->
+
+      # stop leeching
       :choke ->
-        state = %{state |
-          peer_state: :we_choke
-        }
-        # stop leeching
+        state =
+          case peer_state do
+            :we_interest ->
+              %{state | peer_state: :me_interest_it_choke}
+            :me_interest_it_choke ->
+              %{state | peer_state: :we_choke}
+          end
+
+      # start/continue leeching
       :unchoke ->
-        state = %{state |
-          peer_state: :me_choke_it_interest
-        }
-        # start/continue leeching
-      :interested ->
-        :ok
-        # start seeding
-      :not_interested ->
-        :ok
-        # stop seeding
+        state =
+          case peer_state do
+            :we_choke ->
+              %{state | peer_state: :me_choke_it_interest}
+            :me_interest_it_choke ->
+              %{state | peer_state: :we_interest}
+          end
+
+        next_piece_index =
+          Torrent.get_next_piece_index(state.torrent)
+
+        # request sub-pieces in order
+        next_sub_piece_index = 0
+
+        msg =
+          Protocol.encode(:request, next_piece_index, next_sub_piece_index)
+        :gen_tcp.send(state.socket, msg)
+        Logger.debug "Sent request for sub-piece #{next_sub_piece_index} for piece #{next_piece_index}."
+
+        state =
+          %{state | next_sub_piece_index: next_sub_piece_index + 1}
+
+      # start seeding
+      # :interested ->
+
+      # stop seeding
+      # :not_interested ->
+
+      # mark pieces that the peer has
       :have ->
         :ok
-        # mark pieces that the peer has
+
+      # mark pieces that the peer has
       :bitfield ->
         :ok
-        # mark pieces that the peer has
+
+      # TODO
       # :request ->
-        # TODO
+
       :piece ->
-        Torrent.put_sub_piece(state.torrent, msg.piece_index, msg.block_offset, msg.block)
-        state = %{state |
-          # next_sub_piece_index: state.next_sub_piece_index + 1
-          next_sub_piece_index: msg.block_offset + 1
-        }
+        Torrent.put_sub_piece(
+          state.torrent,
+          msg.piece_index,
+          msg.block_offset,
+          msg.block
+        )
+
+        next_piece_index =
+          Torrent.get_next_piece_index(state.torrent)
+
+        next_sub_piece_index =
+          if msg.block_offset + 1 < 32  do
+            msg.block_offset + 1
+          else
+            0
+          end
+
+        msg =
+          Protocol.encode(
+            :request,
+            next_piece_index,
+            next_sub_piece_index
+          )
+        :gen_tcp.send(state.socket, msg)
+
+        Logger.debug "Sent request for sub-piece #{next_sub_piece_index} for piece #{next_piece_index}."
+
+        state =
+          %{state | next_sub_piece_index: next_sub_piece_index}
+
+      # TODO
       # :cancel ->
-        # TODO
+
+      # TODO
       # :port ->
-        # TODO
+
+      type ->
+        unless msg.type == :keep_alive do
+          Logger.debug "Did not handle message type #{type}."
+        end
     end
 
     loop_messages(msgs, state)
@@ -202,5 +280,9 @@ defmodule Trex.Server do
 
   def request_next_block do
     :ok
+  end
+
+  defp send_message(socket, msg) do
+    :gen_tcp.send(socket, msg)
   end
 end
