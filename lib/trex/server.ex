@@ -9,8 +9,8 @@ defmodule Trex.Server do
 
   @opts [:binary, active: 1]
   @timeout 2_000
-  @interested_interval 2_500
-  @keep_alive_interval 5_000
+  @interested_interval 5_000
+  @keep_alive_interval 30_000
 
   # Client -------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ defmodule Trex.Server do
 
   ## TCP =====================================================================
 
-  def handle_info({:tcp, socket, data}, state) do
+  def handle_info({:tcp, _socket, data}, state) do
     {msgs, _} =
       Protocol.decode(data)
 
@@ -213,7 +213,8 @@ defmodule Trex.Server do
 
       # mark pieces that the peer has
       :bitfield ->
-        :ok
+        first = <<a, b, c, d>> <> <<rest::binary>> = msg.bitfield
+        IO.inspect first
 
       # TODO
       # :request ->
@@ -225,6 +226,10 @@ defmodule Trex.Server do
           msg.block_offset,
           msg.block
         )
+
+        IO.puts "piece index and sub-piece index"
+        IO.inspect msg.piece_index
+        IO.inspect msg.block_offset
 
         next_piece_index =
           Torrent.get_next_piece_index(state.torrent)
@@ -274,15 +279,7 @@ defmodule Trex.Server do
     |> Enum.join(".")
   end
 
-  def request_next_piece(piece_len, state) do
-    Protocol.encode(:request, state.current_piece, state.current_block)
-  end
-
-  def request_next_block do
-    :ok
-  end
-
-  defp send_message(socket, msg) do
-    :gen_tcp.send(socket, msg)
-  end
+  # defp send_message(socket, msg) do
+  #   :gen_tcp.send(socket, msg)
+  # end
 end

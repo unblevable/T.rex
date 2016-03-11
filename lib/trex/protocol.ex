@@ -194,6 +194,8 @@ defmodule Trex.Protocol do
     <<byte_size(msg)::size(32)>> <> msg
   end
 
+  def encode(type, piece_index, block_offset, block_len \\ @block_len)
+
   def encode(:handshake, reserved, info_hash, peer_id) do
     <<
       @protocol_string_len,
@@ -204,18 +206,13 @@ defmodule Trex.Protocol do
     >>
   end
 
-  def encode(
-    :request,
-    piece_index,
-    block_offset,
-    block_length \\ @block_len
-  ) do
+  def encode(:request, piece_index, block_offset, block_len) do
     <<
       @request_len::size(32),
       @request_id,
       piece_index::size(32),
       block_offset::size(32),
-      block_length::size(32)
+      block_len::size(32)
     >>
   end
 

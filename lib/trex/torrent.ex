@@ -93,11 +93,8 @@ defmodule Trex.Torrent do
       peers: peers_binary
     } = tracker_info = Tracker.request(request_url)
 
-    # TODO: use ETS instead of tuples?
     ## Piece selection
 
-    piece_size =
-      piece_length * 8;
     num_pieces =
       div(byte_size(pieces), @piece_hash_size)
 
@@ -162,16 +159,19 @@ defmodule Trex.Torrent do
 
   def handle_cast({:put_sub_piece, piece_index, sub_piece_index, sub_piece}, state) do
     IO.puts "num sub-pieces: #{state.num_sub_pieces}"
+    IO.puts "sub-piece index: #{sub_piece_index}"
+    IO.puts "piece index #{piece_index}"
+
     piece_buffer =
       state.piece_buffer
 
     if sub_piece_index < state.num_sub_pieces do
-      Logger.debug "Received sub piece #{sub_piece_index} for piece #{piece_index}."
+      Logger.debug "Received sub-piece #{sub_piece_index} for piece #{piece_index}."
       :ets.insert(piece_buffer, {sub_piece_index, sub_piece})
     else
-      IO.puts piece_index
-      IO.puts piece_index + 1
-      IO.puts "Piece buffer to save:"
+      # IO.puts Integer.parse(piece_index)
+      # IO.puts Integer.parse(piece_index) + 1
+      # IO.puts "Piece buffer to save:"
       IO.inspect :ets.tab2list(piece_buffer)
 
       # clear the piece buffer
