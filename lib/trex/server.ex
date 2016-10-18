@@ -48,14 +48,13 @@ defmodule Trex.Server do
     socket =
       state.socket
 
-    case state.peer_state do
+    timer = case state.peer_state do
       :we_choke ->
         msg =
           Protocol.encode(:interested)
         :gen_tcp.send(socket, msg)
 
-        timer =
-          :erlang.start_timer(@interested_interval, self(), :send_message)
+        :erlang.start_timer(@interested_interval, self(), :send_message)
 
         Logger.debug "Sent interested."
       :we_interest ->
@@ -65,15 +64,13 @@ defmodule Trex.Server do
           Protocol.encode(:keep_alive)
         :gen_tcp.send(socket, msg)
 
-        timer =
-          :erlang.start_timer(@keep_alive_interval, self(), :send_message)
+        :erlang.start_timer(@keep_alive_interval, self(), :send_message)
 
         Logger.debug "Sent keep-alive."
       :me_interest_it_choke ->
         :ok
       _ ->
-        timer =
-          :erlang.start_timer(@keep_alive_interval, self(), :send_message)
+        :erlang.start_timer(@keep_alive_interval, self(), :send_message)
     end
 
     state =
@@ -157,10 +154,9 @@ defmodule Trex.Server do
 
     peer_state = state.peer_state
 
-    case msg.type do
+    state = case msg.type do
       :handshake ->
         if peer_state == :pre_handshake do
-          state =
             %{state | peer_state: :we_choke}
         end
 
@@ -198,8 +194,7 @@ defmodule Trex.Server do
         :gen_tcp.send(state.socket, msg)
         Logger.debug "Sent request for sub-piece #{next_sub_piece_index} for piece #{next_piece_index}."
 
-        state =
-          %{state | next_sub_piece_index: next_sub_piece_index + 1}
+        %{state | next_sub_piece_index: next_sub_piece_index + 1}
 
       # start seeding
       # :interested ->
@@ -213,7 +208,7 @@ defmodule Trex.Server do
 
       # mark pieces that the peer has
       :bitfield ->
-        first = <<a, b, c, d>> <> <<rest::binary>> = msg.bitfield
+        first = <<_a, _b, _c, _d>> <> <<_rest::binary>> = msg.bitfield
         IO.inspect first
 
       # TODO
@@ -251,8 +246,7 @@ defmodule Trex.Server do
 
         Logger.debug "Sent request for sub-piece #{next_sub_piece_index} for piece #{next_piece_index}."
 
-        state =
-          %{state | next_sub_piece_index: next_sub_piece_index}
+        %{state | next_sub_piece_index: next_sub_piece_index}
 
       # TODO
       # :cancel ->
