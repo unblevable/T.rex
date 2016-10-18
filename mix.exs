@@ -75,7 +75,7 @@ defmodule Trex.Mixfile do
       )
 
     hash =
-      :crypto.rand_bytes(hash_length)
+      :crypto.strong_rand_bytes(hash_length)
 
     "-" <> @client_abbr <> @version <> "-" <> hash
   end
