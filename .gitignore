@@ -6,6 +6,3 @@
 *.ez
 
 /bin
-/priv/*
-!/priv/flagfromserver.torrent
-JUST_DO_IT.md
