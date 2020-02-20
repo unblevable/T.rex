@@ -4,8 +4,42 @@ defmodule Tr do
   """
 
   @doc false
-  def start do
-    Request.get("google.com")
+  def get(domain) do
+    Request.get(domain)
+  end
+
+  def read(path) do
+    result =
+      path
+      |> Path.expand()
+      |> File.open([:raw, :read_ahead], fn file ->
+        case IO.binread(file, :all) do
+          {:error, reason} ->
+            # TODO: handle error
+            IO.puts(:stderr, reason)
+            exit(reason)
+
+          data ->
+            data
+        end
+      end)
+
+    case result do
+      {:error, reason} ->
+        # TODO: handle error
+        IO.puts(:stderr, reason)
+        exit(reason)
+
+      {:ok, data} ->
+        data
+    end
+  end
+
+  # TODO: temporary
+  def process do
+    "example_data/example.torrent"
+    |> Tr.read()
+    |> Tr.Bencode.decode()
   end
 end
 
@@ -23,6 +57,7 @@ defmodule Request do
     IO.inspect(data, label: :data, pretty: true)
 
     Mint.HTTP.close(conn)
+    :ok
   end
 
   defp receive_loop(conn, request_ref, data \\ []) do
