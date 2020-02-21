@@ -1,4 +1,5 @@
 defmodule Tr.Bencode do
+  # TODO: Follow conventions of error handling, i.e. { :ok, data }, Tr.Bencode.encode!, etc
   @moduledoc """
   Bencode decoder and encoder.
   """
@@ -91,6 +92,7 @@ defmodule Tr.Bencode do
     }
   end
 
+  # NOTE: The number (head) is encoded in ascii
   defp decode_integer(<<head::utf8, rest::bytes>>, acc) do
     decode_integer(rest, [head | acc])
   end
@@ -136,6 +138,7 @@ defmodule Tr.Bencode do
     {string, rest}
   end
 
+  # NOTE: "Strings" can be UTF-8 encoded strings or raw byte arrays
   defp decode_string(<<head::utf8, rest::bytes>>, acc) do
     decode_string(rest, [head | acc])
   end
@@ -171,7 +174,6 @@ defmodule Tr.Bencode do
     [
       "d",
       dictionary
-      # TODO: does the spec require sorting?
       |> Enum.sort()
       |> Enum.map(fn {k, v} -> [encode_type(k), encode_type(v)] end)
       |> Enum.reduce(fn x, acc -> [acc, x] end),
